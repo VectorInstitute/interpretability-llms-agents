@@ -30,7 +30,7 @@ ref1-refresher-interpretability = [
     # "pkg-one>=0.1.0",
 ]
 
-ref2-transparency-xai-toxicity= [
+ref2-transparency-xai-toxicity = [
     # "pkg-two>=0.1.0",
 ]
 
