@@ -52,6 +52,6 @@ python -m ipykernel install --user --name dpo_env --display-name "dpo_env"
 ## Notes
 
 - Run notebooks sequentially from **01 → 05**.
-- Ensure GPU availability before DPO training.
+- Ensure GPU availability before running inference_runner.
 - The quality of alignment depends strongly on the judge model and prompt design.
-
+- Our results might have less win rate since we used only 300 samples for training, for better results use larger amount of data.
