@@ -150,11 +150,8 @@ def score_and_predict(model: Any, tok: Any, text: str, task: str) -> dict[str, A
 def integrated_gradients(
     model: Any, tok: Any, text: str, task: str, steps: int = 32
 ) -> tuple[list[str], npt.NDArray[np.floating[Any]], str]:
-    """Compute Integrated Gradients attributions for the prompt.
+    """Compute IG for full multi-token label log-prob difference."""
 
-    Computes IG on scalar: log p(pos_first_token) - log p(neg_first_token)
-    w.r.t. prompt embeddings. Uses path baseline = zeros.
-    """
     device = next(model.parameters()).device
     model_dtype = next(model.parameters()).dtype
 
@@ -164,42 +161,69 @@ def integrated_gradients(
     attn = enc["attention_mask"].to(device)
 
     emb_layer = model.get_input_embeddings()
-    x = (
-        emb_layer(input_ids).detach().to(model_dtype)
-    )  # Current embeddings (no grad yet)
-    x0 = torch.zeros_like(x)  # Zero baseline (can swap for mean/embed of pad)
+    x = emb_layer(input_ids).detach().to(model_dtype)
+    x0 = torch.zeros_like(x)
 
     pos_label, neg_label = LABELS[task]
-    # Use only first token of each label for stable logits
-    # (fast; avoids multi-token loops)
-    pos_id = tok.encode(pos_label, add_special_tokens=False)[0]
-    neg_id = tok.encode(neg_label, add_special_tokens=False)[0]
+    pos_ids = tok.encode(pos_label, add_special_tokens=False)
+    neg_ids = tok.encode(neg_label, add_special_tokens=False)
+
+    def full_label_logprob(emb: torch.Tensor, label_ids: list[int]) -> torch.Tensor:
+        """
+        Compute log p(full_label | prompt) using teacher forcing.
+        Only prompt embeddings get gradients.
+        """
+        cur_emb = emb
+        cur_attn = attn.clone()
+        total_logprob = 0.0
+
+        for lid in label_ids:
+            out = model(inputs_embeds=cur_emb, attention_mask=cur_attn, use_cache=False)
+            logits = out.logits[:, -1, :]
+            logprobs = functional.log_softmax(logits, dim=-1)
+            total_logprob = total_logprob + logprobs[0, lid]
+
+            # Append next label token as *constant* embedding
+            next_token = torch.tensor([[lid]], device=device)
+            next_emb = emb_layer(next_token).to(model_dtype)
+
+            cur_emb = torch.cat([cur_emb, next_emb], dim=1)
+            cur_attn = torch.cat(
+                [cur_attn, torch.ones((1, 1), device=device, dtype=cur_attn.dtype)],
+                dim=1,
+            )
+
+        return total_logprob
 
     def score_fn(emb: torch.Tensor) -> torch.Tensor:
-        # Single forward with inputs_embeds ensures gradient path
-        out = model(inputs_embeds=emb, attention_mask=attn, use_cache=False)
-        last_logits = out.logits[:, -1, :]  # Logits predicting label position
-        last_logprobs = functional.log_softmax(last_logits, dim=-1)
-        return last_logprobs[0, pos_id] - last_logprobs[0, neg_id]
+        pos_score = full_label_logprob(emb, pos_ids)
+        neg_score = full_label_logprob(emb, neg_ids)
+        return pos_score - neg_score
 
-    alphas = torch.linspace(0, 1, steps=steps, device=device, dtype=model_dtype).view(
-        -1, 1, 1, 1
-    )
+    # ----- Integrated Gradients -----
+    alphas = torch.linspace(
+        0, 1, steps=steps, device=device, dtype=model_dtype
+    ).view(-1, 1, 1, 1)
+
     grads = torch.zeros_like(x)
+
     for a in alphas:
-        emb = (x0 + a * (x - x0)).requires_grad_(True)  # Interpolated embeddings
+        emb = (x0 + a * (x - x0)).requires_grad_(True)
         s = score_fn(emb)
         s.backward()
         grads += emb.grad.detach()
 
-    avg_grads = grads / steps  # Path integral approximation
-    atts = (
-        (avg_grads * (x - x0)).sum(dim=-1).squeeze(0)
-    )  # Dot product across hidden dim
-    atts = atts / (atts.abs().sum() + 1e-8)  # Normalize to sum(|atts|)=1
+    avg_grads = grads / steps
+    atts = (avg_grads * (x - x0)).sum(dim=-1).squeeze(0)
+    atts = atts / (atts.abs().sum() + 1e-8)
 
     tokens = tok.convert_ids_to_tokens(input_ids[0].tolist())
-    return tokens, atts.cpu().numpy(), prompt
+
+    with torch.no_grad():
+        explained_score = float(score_fn(x))
+        
+    return tokens, atts.cpu().numpy(), prompt, explained_score
+
 
 
 def save_heatmap(
