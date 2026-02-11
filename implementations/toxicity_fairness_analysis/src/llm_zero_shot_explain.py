@@ -95,31 +95,35 @@ def format_prompt(text: str, task: str) -> str:
     }[task]
     return f"{instruction}{text}\nLabel:"
 
-
 @torch.no_grad()  # type: ignore[misc]
 def label_logprob(
     model: Any,
     tok: Any,
     prompt_ids: torch.Tensor,
     label_str: str,
-    max_label_tokens: int = 3,
 ) -> float:
-    """Compute log probability of a label given the prompt."""
-    # Compute log p(label | prompt) by teacher-forcing each label token sequentially
+    """Compute log probability of a full label given the prompt.
+
+    Computes log p(label | prompt) via teacher forcing over
+    all label tokens (no truncation).
+    """
     label_ids = tok.encode(label_str, add_special_tokens=False)
-    if len(label_ids) > max_label_tokens:
-        label_ids = label_ids[:max_label_tokens]  # Truncate very long textual labels
+
     cur_ids = prompt_ids.clone()
     logp = 0.0
+
     for lid in label_ids:
-        out = model(input_ids=cur_ids)  # Forward over current context
-        next_logits = out.logits[:, -1, :]  # Next-token distribution
+        out = model(input_ids=cur_ids)
+        next_logits = out.logits[:, -1, :]
         logp += functional.log_softmax(next_logits, dim=-1)[0, lid]
-        # Append the ground-truth label token (teacher forcing)
+
         cur_ids = torch.cat(
-            [cur_ids, torch.tensor([[lid]], device=cur_ids.device)], dim=1
+            [cur_ids, torch.tensor([[lid]], device=cur_ids.device)],
+            dim=1,
         )
+
     return float(logp)
+
 
 
 def score_and_predict(model: Any, tok: Any, text: str, task: str) -> dict[str, Any]:
