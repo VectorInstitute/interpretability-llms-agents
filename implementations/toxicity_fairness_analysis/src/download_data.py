@@ -48,22 +48,6 @@ def to_parquet(df: pd.DataFrame, out_path: str) -> None:
     )  # Print the number of rows written
 
 
-# Function to perform reservoir sampling on an iterable
-def sample_iter(it: Iterator[Any], n: int) -> list[Any]:
-    """Perform reservoir sampling on an iterable."""
-    out: list[Any] = []  # Initialize the output list
-    for seen, row in enumerate(it, start=1):
-        if len(out) < n:
-            out.append(
-                row
-            )  # Add the row to the output if the output size is less than n
-        else:
-            j = random.randint(0, seen - 1)  # Randomly replace an existing element
-            if j < n:
-                out[j] = row
-    return out
-
-
 # Function to load the CivilComments dataset
 def load_civil(
     stream: bool = False, take: int | None = None, split: str = "train"
@@ -82,6 +66,12 @@ def load_civil(
         "threat",
     ]
     if stream:
+        if take is None:
+            raise ValueError(
+                "When using --stream, you must specify --take to limit the number of rows. "
+                "Example: --stream --take 200000"
+            )
+    
         it_gen: Generator[dict[str, Any], None, None] = (
             {
                 "comment_text": r.get("text", ""),
@@ -94,8 +84,9 @@ def load_civil(
             }
             for r in ds
         )
-        it = list(itertools.islice(it_gen, int(take))) if take else list(it_gen)
-        return pd.DataFrame(it)  # Convert to a DataFrame
+    
+        it = list(itertools.islice(it_gen, take))
+        return pd.DataFrame(it)
     # Remove unwanted columns and rename for consistency
     ds = ds.remove_columns([c for c in ds.column_names if c not in cols_keep])
     return ds.to_pandas().rename(columns={"text": "comment_text", "toxicity": "target"})

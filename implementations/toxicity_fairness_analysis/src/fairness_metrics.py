@@ -203,7 +203,10 @@ def main() -> None:  # noqa: PLR0912, PLR0915
         worst_spd = pi["SPD"].abs().max()
         worst_eopp = pi["EOpp_diff"].abs().max()
         # worst performance across all non-skipped groups
-        non_skipped = rep[~rep.get("skipped", False)]
+        if rep.empty or "skipped" not in rep.columns:
+            non_skipped = rep
+        else:
+            non_skipped = rep[~rep["skipped"]]
         worst_acc = non_skipped["acc"].min() if "acc" in non_skipped else np.nan
         worst_f1 = non_skipped["f1"].min() if "f1" in non_skipped else np.nan
         summary_rows.append(
