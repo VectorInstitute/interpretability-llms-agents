@@ -1,7 +1,7 @@
 import os
 import subprocess
-from dataset_utils import seconds_to_srt
-from media_utils import get_duration
+from src.dataset_utils import seconds_to_srt
+from src.media_utils import get_duration
 
 def save_segmented_srt(entries, segment_length, video_id, output_dir, total_segments):
     """

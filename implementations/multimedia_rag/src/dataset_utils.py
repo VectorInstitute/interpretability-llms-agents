@@ -104,26 +104,25 @@ def check_dataset_integrity(root_path,
 
 def extract_video_number(filename):
     """
-    Extract the numeric ID from a given filename.
-
-    Parameters:
-    - filename (str): The name of the file (e.g., "video_001.mp4").
-
+    Extract base numeric video ID from filenames like:
+        002.mp4
+        video_002.mp4
+        002__000.mp4
+        video_002__000.mp4
+    
     Returns:
-    - str or None: The extracted numeric ID as a string if found, otherwise None.
-
-    Example:
-    >>> extract_video_number("video_001.mp4")
-    '001'
-    >>> extract_video_number("audio_123.m4a")
-    '123'
-    >>> extract_video_number("invalid_file.txt")
-    None
+        '002' or None
     """
-    # Use a regular expression to search for a numeric pattern preceded by an underscore and followed by a dot.
-    match = re.search(r'_(\d+)\.', filename)
-    # Return the matched numeric group if found, otherwise return None.
-    return match.group(1) if match else None
+    base = os.path.splitext(filename)[0]
+
+    # Remove segmentation part if present (002__000 -> 002)
+    base = base.split("__")[0]
+
+    # Remove optional prefix (video_002 -> 002)
+    if "_" in base:
+        base = base.split("_")[-1]
+
+    return base if base.isdigit() else None
 
 
 def filter_json_by_existing_videos(json_path, video_folder, output_path=None):
