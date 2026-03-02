@@ -1,7 +1,9 @@
 # import sys
-# sys.path.append("/ibex/user/feij0a/phd_project/av-haystack/ImageBind")
 import os
 import math
+import tempfile
+import matplotlib.pyplot as plt
+from PIL import Image
 import torch
 import torch.nn.functional as F
 import torchaudio
@@ -9,6 +11,8 @@ import argparse
 from imagebind import data
 from imagebind.models import imagebind_model
 from imagebind.models.imagebind_model import ModalityType
+import decord
+decord.bridge.set_bridge("torch")
 # from ImageBind.imagebind import data
 # from ImageBind.imagebind.models import imagebind_model
 # from ImageBind.imagebind.models.imagebind_model import ModalityType
@@ -406,242 +410,239 @@ class AVRAG:
         Q = self.build_sfs_Q(candidate_z, gamma=gamma)
         return self.sfs_select_indices(Q, k=k)
 
+
+def sample_frames(video_path, m=16):
+    """
+    Sample m frames uniformly from a video.
+    
+    Args:
+        video_path (str): Path to the video file
+        m (int): Number of frames to sample
+        
+    Returns:
+        tuple: (frames, indices) where frames is a tensor of shape (m, H, W, C)
+               and indices is a tensor of frame indices
+    """
+    vr = decord.VideoReader(video_path)
+    total = len(vr)
+    
+    # Sample frames uniformly across the video duration
+    indices = torch.linspace(0, total - 1, steps=m).long()
+    frames = vr.get_batch(indices)
+    
+    return frames, indices
+
+
+def encode_frames_with_imagebind(rag, frames):
+    """
+    Encode video frames using ImageBind vision encoder.
+    
+    Args:
+        rag (AVRAG): The AVRAG model instance
+        frames (torch.Tensor): Tensor of video frames with shape (m, H, W, C)
+        
+    Returns:
+        torch.Tensor: Vision embeddings for the frames
+    """
+    # Create temporary directory for frame images
+    tmp_dir = tempfile.mkdtemp()
+    paths = []
+
+    # Save each frame as a temporary image file
+    for i, frame in enumerate(frames):
+        img = Image.fromarray(frame.numpy())
+        path = os.path.join(tmp_dir, f"{i}.jpg")
+        img.save(path)
+        paths.append(path)
+
+    # Encode frames using ImageBind vision encoder
+    return rag.encode(paths, ModalityType.VISION)["embeddings"]
+    
+
+def sample_audio_windows(audio_path, frame_indices, video_fps, window_sec=2.0):
+    """
+    Extract audio windows corresponding to sampled video frames.
+    
+    Args:
+        audio_path (str): Path to the audio file
+        frame_indices (torch.Tensor): Frame indices from video sampling
+        video_fps (float): Video frames per second
+        window_sec (float): Duration of audio window in seconds (default: 2.0)
+        
+    Returns:
+        list: List of audio clips (torch.Tensor) corresponding to each frame
+    """
+    # Load audio waveform
+    waveform, sr = torchaudio.load(audio_path)
+    windows = []
+
+    # Minimum audio length required (0.5 seconds)
+    min_required = int(0.5 * sr)
+
+    for frame_idx in frame_indices:
+        # Convert frame index to time in seconds
+        center_time = frame_idx.item() / video_fps
+        
+        # Calculate audio window boundaries
+        start = int(max(0, (center_time - window_sec/2) * sr))
+        end = int(min(waveform.shape[1], (center_time + window_sec/2) * sr))
+
+        # Extract audio clip
+        clip = waveform[:, start:end]
+
+        # Pad clip if it's shorter than minimum required length
+        if clip.shape[1] < min_required:
+            pad_amount = min_required - clip.shape[1]
+            clip = torch.nn.functional.pad(clip, (0, pad_amount))
+
+        windows.append(clip)
+
+    return windows
+
 if __name__ == "__main__":
 
-    base_dir = "/fs01/projects/aixpert/users/aravind/interpretability_agent_bootcamp/implementations/multimedia_rag/data/Customer_Service_Interactions"
+    # -------------------------------------------------
+    # Configuration
+    # -------------------------------------------------
+    BASE_DIR = "/projects/aixpert/users/aravind/interpretability_agent_bootcamp/implementations/multimedia_rag/data/Customer_Service_Interactions"
 
-    video_dir = os.path.join(base_dir, "process-video")
-    audio_dir = os.path.join(base_dir, "process-audio")
-    caption_dir = os.path.join(base_dir, "caption")
+    VIDEO_DIR = os.path.join(BASE_DIR, "process-video")
+    AUDIO_DIR = os.path.join(BASE_DIR, "process-audio")
+    CAPTION_DIR = os.path.join(BASE_DIR, "caption")
 
+    TOP_K = 3
+    NUM_FILES = 8
+    NUM_FRAMES = 16
+    SFS_K = 5
+    GAMMA = 0.0
+
+    # -------------------------------------------------
+    # Initialize RAG
+    # -------------------------------------------------
     rag = AVRAG(model_path="./checkpoints/imagebind_huge.pth", bsz=16)
 
-    # ---- Example Queries ----
-    text_list = [
-        "What inconsistency first reveals the receptionist's misleading professional approach to the customer regarding the hotel's services?",
-        "Despite the customer's claims of being full after finishing a second serving of noodles, the chef insists on preparing a final rice dish, emphasizing it's part of 'Japanese culture.'",
-        "McDouble"
-    ]
+    # -------------------------------------------------
+    # Example Queries
+    # -------------------------------------------------
+    queries = [
+    "Find My iPhone",
+    "Despite the customer's claims of being full after finishing a second serving of noodles, the chef insists on preparing a final rice dish, emphasizing it's part of 'Japanese culture.'",
+    "Anna's money transfer"
+]
 
-    # Helper
-    def get_first_k(dir_path, ext, k):
-        return sorted(
-            os.path.join(dir_path, f)
-            for f in os.listdir(dir_path)
-            if f.endswith(ext)
-        )[:k]
+    # -------------------------------------------------
+    # Collect Media
+    # -------------------------------------------------
+    video_paths = get_first_k(VIDEO_DIR, ".mp4", NUM_FILES)
+    audio_paths = get_first_k(AUDIO_DIR, ".wav", NUM_FILES)
+    caption_paths = get_first_k(CAPTION_DIR, ".srt", NUM_FILES)
 
+    print("Videos:", video_paths)
+    print("Audios:", audio_paths)
+    print("Captions:", caption_paths)
 
-    video_paths = get_first_k(video_dir, ".mp4", 4)
-    audio_paths = get_first_k(audio_dir, ".wav", 4)
-    caption_paths = get_first_k(caption_dir, ".srt", 4)
-    
-    print("Using videos:", video_paths)
-    print("Using audios:", audio_paths)
-    print("Using captions:", caption_paths)
-    
-    print("\nEncoding query...")
-    t_embed = rag.encode(text_list, ModalityType.TEXT)
-    
+    # -------------------------------------------------
+    # Encode Modalities
+    # -------------------------------------------------
+    print("\nEncoding text queries...")
+    t_embed = rag.encode(queries, ModalityType.TEXT)
+
     print("Encoding videos...")
     v_embed = rag.encode(video_paths, ModalityType.VISION)
-    
+
     print("Encoding audios...")
     a_embed = rag.encode(audio_paths, ModalityType.AUDIO)
-    
+
     print("Encoding captions...")
-    texts = [rag._parse_srt(p) for p in caption_paths]
-    c_embed = rag.encode(texts, ModalityType.TEXT)
+    caption_texts = [rag._parse_srt(p) for p in caption_paths]
+    c_embed = rag.encode(caption_texts, ModalityType.TEXT)
     c_embed["filename"] = [
         os.path.splitext(os.path.basename(p))[0]
         for p in caption_paths
     ]
 
+    # -------------------------------------------------
+    # Joint Retrieval
+    # -------------------------------------------------
     print("\nRunning Joint AV-RAG retrieval...")
-    j_res = rag.joint_rag(
+    joint_results = rag.joint_rag(
         t_embed,
         v_embed,
         a_embed,
         c_embed,
-        k=3
+        k=TOP_K
     )
 
     print("\n================ Joint AV-RAG Results ================")
-    for result in j_res:
+    for result in joint_results:
         print(result)
 
-    # To begin testing SFS
-
-
+    # -------------------------------------------------
+    # Salient Frame Selection (SFS)
+    # -------------------------------------------------
     print("\n================ Running SFS on Top-1 Videos ================")
 
-    import decord
-    decord.bridge.set_bridge("torch")
-    
-    def sample_frames(video_path, m=16):
-        vr = decord.VideoReader(video_path)
-        total = len(vr)
-        indices = torch.linspace(0, total - 1, steps=m).long()
-        frames = vr.get_batch(indices)  # (m, H, W, C)
-        return frames, indices
-    
-    
-    def encode_frames_with_imagebind(rag, frames):
-        """
-        Convert frame tensors -> temp jpg files -> encode using existing encode()
-        """
-        import tempfile
-        from PIL import Image
-    
-        tmp_dir = tempfile.mkdtemp()
-        paths = []
-    
-        for i, frame in enumerate(frames):
-            img = Image.fromarray(frame.numpy())
-            path = os.path.join(tmp_dir, f"{i}.jpg")
-            img.save(path)
-            paths.append(path)
-    
-        v_embed = rag.encode(paths, ModalityType.VISION)
-        return v_embed["embeddings"]
-    
-    def sample_audio_windows(audio_path, frame_indices, video_fps, window_sec=1.0):
-        waveform, sr = torchaudio.load(audio_path)
-        windows = []
-    
-        for frame_idx in frame_indices:
-            center_time = frame_idx.item() / video_fps
-            start = int(max(0, (center_time - window_sec/2) * sr))
-            end = int(min(waveform.shape[1], (center_time + window_sec/2) * sr))
-            clip = waveform[:, start:end]
-            windows.append(clip)
-    
-        return windows
-    
-    # Iterate over queries
-    for q_idx, result in enumerate(j_res):
-    
+    for q_idx, result in enumerate(joint_results):
+
         query_key = list(result.keys())[0]
-        top1_video_id = result[query_key][0]["file"]  # e.g. '001'
-    
-        # find full path
-        top1_path = [p for p in video_paths if top1_video_id in p][0]
-    
-        print(f"\nQuery: {query_key}")
+        top1_video_id = result[query_key][0]["file"]
+
+        top1_video_path = next(p for p in video_paths if top1_video_id in p)
+        top1_audio_path = next(p for p in audio_paths if top1_video_id in p)
+
+        print(f"\nQuery {q_idx}: {query_key}")
         print(f"Top-1 video: {top1_video_id}")
-        print(f"Video path: {top1_path}")
-    
-        # # ---- Sample candidate frames ----
-        # frames, frame_indices = sample_frames(top1_path, m=16)
-    
-        # # ---- Encode frame embeddings ----
-        # z = encode_frames_with_imagebind(rag, frames)
-    
-        # # ---- Run SFS ----
-        # selected = rag.sfs(z, k=5, gamma=10.0)
 
         # ---- Sample frames ----
-        frames, frame_indices = sample_frames(top1_path, m=16)
-        
+        frames, frame_indices = sample_frames(top1_video_path, m=NUM_FRAMES)
+
         # ---- Encode vision ----
         vision_embed = encode_frames_with_imagebind(rag, frames)
-        
-        # ---- Get matching audio path ----
-        audio_path = [p for p in audio_paths if top1_video_id in p][0]
-        
-        # ---- Get fps ----
-        vr = decord.VideoReader(top1_path)
-        video_fps = vr.get_avg_fps()
-        
-        # ---- Sample audio windows ----
-        audio_clips = sample_audio_windows(audio_path, frame_indices, video_fps)
-        
-        # Save temporary wav clips for encoding
-        import tempfile
+
+        # ---- Audio alignment ----
+        vr = decord.VideoReader(top1_video_path)
+        fps = vr.get_avg_fps()
+
+        audio_clips = sample_audio_windows(
+            top1_audio_path,
+            frame_indices,
+            fps
+        )
+
+        # Save temporary audio clips
         tmp_audio_dir = tempfile.mkdtemp()
-        audio_paths_tmp = []
-        
+        tmp_audio_paths = []
+
         for i, clip in enumerate(audio_clips):
-            path = os.path.join(tmp_audio_dir, f"{i}.wav")
-            torchaudio.save(path, clip, 16000)
-            audio_paths_tmp.append(path)
-        
-        audio_embed = rag.encode(audio_paths_tmp, ModalityType.AUDIO)["embeddings"]
-        
-        # ---- Fuse AV per frame ----
+            tmp_path = os.path.join(tmp_audio_dir, f"{i}.wav")
+            torchaudio.save(tmp_path, clip, 16000)
+            tmp_audio_paths.append(tmp_path)
+
+        audio_embed = rag.encode(tmp_audio_paths, ModalityType.AUDIO)["embeddings"]
+
+        # ---- Fuse AV ----
         z = vision_embed * audio_embed
-        
+
         # ---- Run SFS ----
-        selected = rag.sfs(z, k=5, gamma=0.0)
-    
+        selected_indices = rag.sfs(z, k=SFS_K, gamma=GAMMA)
+
         print("Candidate frame indices:", frame_indices.tolist())
-        print("Selected SFS indices (within candidates):", selected)
-        print("Selected actual frame numbers:", frame_indices[selected].tolist())
+        print("Selected SFS indices:", selected_indices)
+        print("Selected frame numbers:", frame_indices[selected_indices].tolist())
 
+        # ---- Visualize Q Matrix ----
+        Q = rag.build_sfs_Q(z, gamma=GAMMA).detach().cpu().numpy()
 
-        import matplotlib.pyplot as plt
-
-        # Build Q
-        Q = rag.build_sfs_Q(z, gamma=0.0)
-        
-        # Move to CPU for plotting
-        Q_cpu = Q.detach().cpu().numpy()
-        
-        plt.figure(figsize=(6,5))
-        plt.imshow(Q_cpu, cmap="viridis")
+        plt.figure(figsize=(6, 5))
+        plt.imshow(Q, cmap="viridis")
         plt.colorbar()
-        plt.title(f"Q Matrix Heatmap - Video {top1_video_id}")
+        plt.title(f"Q Matrix - Video {top1_video_id}")
         plt.xlabel("Frame index")
         plt.ylabel("Frame index")
         plt.tight_layout()
-        # plt.show()
-        # Save to current directory
-        save_path = f"tmp_{top1_video_id}_{query_name}.jpg"
+
+        save_path = f"tmp_Q_{top1_video_id}_q{q_idx}.jpg"
         plt.savefig(save_path, dpi=200)
         plt.close()
-        
+
         print(f"Saved Q heatmap to {save_path}")
-    
-    
-    
-
-# if __name__ == "__main__":
-
-#     parser = argparse.ArgumentParser(description="AV-RAG")
-#     parser.add_argument("--model_path", type=str, default="./checkpoints/imagebind_huge.pth", help="Path to the model.")
-#     parser.add_argument("--bsz", type=int, default=128, help="Batch size.")
-#     parser.add_argument("--cache", action="store_true", help="Use cache.")
-#     parser.add_argument("--mode", type=str, default="0", help="Mode.")
-#     parser.add_argument("--topk", type=int, default=1, help="Number of top results to return.")
-#     parser.add_argument("--alpha_v", type=float, default=0.5, help="The importance of vision compared to audio.")
-#     args = parser.parse_args()
-
-#     rag = AVRAG(model_path = args.model_path, bsz = args.bsz)
-
-#     text_list=["A dog", "A car", "A bird"]
-
-#     image_paths=["./assets/test/images/dog.jpg", "./assets/test/images/car.jpg", "./assets/test/images/bird.jpg"]
-#     video_paths=["./assets/test/videos/dog.mp4", "./assets/test/videos/car.mp4", "./assets/test/videos/bird.mp4"]
-#     audio_paths=["./assets/test/audios/dog.wav", "./assets/test/audios/car.wav", "./assets/test/audios/bird.wav"]
-#     if args.cache:
-#         image_paths = "./assets/image_embeddings.pt"
-#         video_paths = "./assets/video_embeddings.pt"
-#         audio_paths = "./assets/audio_embeddings.pt"
-    
-    
-#     t_embed = rag.encode(text_list, ModalityType.TEXT)
-#     v_embed = rag.encode(video_paths, ModalityType.VISION, cache = args.cache)
-#     a_embed = rag.encode(audio_paths, ModalityType.AUDIO, cache = args.cache)
-    
-#     v_res = rag.pair_rag(t_embed, v_embed, k = args.topk)
-#     a_res = rag.pair_rag(t_embed, a_embed, k = args.topk)
-#     j_res = rag.joint_rag(t_embed, v_embed, a_embed, k = args.topk, alpha_v = args.alpha_v, mode = args.mode)
-
-#     print("=========================Text-Vision RAG============================")
-#     print(v_res)
-#     print("\n=========================Text-Audio RAG============================")
-#     print(a_res)
-#     print("\n==================Text-(Audio, Vision) joint RAG=====================")
-#     print(j_res)
-    
-
