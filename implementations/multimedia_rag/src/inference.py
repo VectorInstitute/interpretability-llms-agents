@@ -1,6 +1,117 @@
 import os
 import time
 import torch
+import torchaudio
+import tempfile
+import matplotlib.pyplot as plt
+import decord
+decord.bridge.set_bridge("torch")
+from imagebind.models.imagebind_model import ModalityType
+from src.model.avrag import (
+    sample_frames, 
+    encode_frames_with_imagebind,
+    sample_audio_windows
+)
+
+def run_frame_evidence_analysis(
+    rag,
+    j_res,
+    t_embed,
+    video_paths,
+    audio_paths,
+    m=16,
+    topk_frames=5,
+    gamma=10.0
+):
+    """
+    Frame-level evidence analysis using SFS and naive top-K selection.
+
+    Args:
+    - rag: The RAG model instance.
+    - j_res: Retrieval results containing top-1 video IDs per query.
+    - t_embed: Text embeddings for the queries.
+    - video_paths: List of all video file paths.
+    - audio_paths: List of all audio file paths.
+    - m: Number of frames to sample from the video.
+    - topk_frames: Number of top frames to select for analysis.
+    - gamma: Hyperparameter for SFS selection.
+    """
+
+    print("\n================ Frame-Level Evidence Analysis ================")
+
+    for q_idx, result in enumerate(j_res):
+
+        query_key = list(result.keys())[0]
+        top1_video_id = result[query_key][0]["file"]
+
+        video_matches = [p for p in video_paths if top1_video_id in os.path.basename(p)]
+        audio_matches = [p for p in audio_paths if top1_video_id in os.path.basename(p)]
+
+        if not video_matches or not audio_matches:
+            print("Matching segment not found.")
+            continue
+
+        top1_path = video_matches[0]
+        audio_path = audio_matches[0]
+
+        print(f"\nQuery: {query_key}")
+        print(f"Top-1 video: {top1_video_id}")
+
+        # ---- Sample frames ----
+        frames, frame_indices = sample_frames(top1_path, m=m)
+        vision_embed = encode_frames_with_imagebind(rag, frames)
+
+        vr = decord.VideoReader(top1_path)
+        video_fps = vr.get_avg_fps()
+        audio_clips = sample_audio_windows(audio_path, frame_indices, video_fps)
+
+        # Save temporary audio clips
+        tmp_audio_dir = tempfile.mkdtemp()
+        audio_paths_tmp = []
+
+        for i, clip in enumerate(audio_clips):
+            path = os.path.join(tmp_audio_dir, f"{i}.wav")
+            torchaudio.save(path, clip, 16000)
+            audio_paths_tmp.append(path)
+
+        audio_embed = rag.encode(audio_paths_tmp, ModalityType.AUDIO)["embeddings"]
+
+        # ---- Fuse AV per frame ----
+        z = vision_embed * audio_embed
+
+        # ---- Naive Top-K ----
+        q_embed = t_embed["embeddings"][q_idx:q_idx+1].to(rag.device)
+        z_norm = torch.nn.functional.normalize(z, dim=-1)
+        q_norm = torch.nn.functional.normalize(q_embed, dim=-1)
+
+        sim_scores = (q_norm @ z_norm.T).squeeze(0)
+        naive_topk = torch.topk(sim_scores, k=topk_frames).indices.cpu().tolist()
+
+        print("Naive Top-K frames:", frame_indices[naive_topk].tolist())
+
+        # ---- SFS ----
+        selected = rag.sfs(z, k=topk_frames, gamma=gamma)
+        print("SFS Selected frames:", frame_indices[selected].tolist())
+
+        # ---- Visualization ----
+        plt.figure(figsize=(12,3))
+        for i, idx in enumerate(selected):
+            plt.subplot(1, len(selected), i+1)
+            plt.imshow(frames[idx].numpy())
+            plt.axis("off")
+            plt.title(f"{frame_indices[idx].item()}")
+        plt.suptitle("SFS Selected Frames")
+        plt.tight_layout()
+        plt.show()
+
+        # ---- Q Matrix ----
+        Q = rag.build_sfs_Q(z, gamma=gamma).cpu().numpy()
+
+        plt.figure(figsize=(6,5))
+        plt.imshow(Q)
+        plt.colorbar()
+        plt.title(f"Q Matrix (gamma={gamma})")
+        plt.show()
 
 def process_retrieved_files(
     retrieved_files,
@@ -90,6 +201,17 @@ def process_retrieved_files(
 def process_question(source, root_data_dir, segment_suffix, model, bsz, topic):
     """
     Processes a single question using hybrid pipeline.
+
+    Args:
+    - source (dict): A dictionary containing the question and retrieved files.
+    - root_data_dir (str): Root directory containing the data.
+    - segment_suffix (str): Suffix for segmented media directories (e.g., "30s").
+    - model: The multimodal model to use for generating answers.
+    - bsz (int): Batch size for processing.
+    - topic (str): Default topic to use if not specified in the retrieved file name.
+
+    Returns:
+    - dict: The input source dictionary augmented with generated answers.
     """
 
     question = source["question"]
