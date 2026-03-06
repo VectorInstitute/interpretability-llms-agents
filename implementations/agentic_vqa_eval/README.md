@@ -134,7 +134,7 @@ This framework produces explainability signals at four distinct levels:
 ## Prerequisites
 
 - Python **3.10** or higher
-- A virtual environment manager (`venv` or `conda`)
+- A virtual environment manager (`venv`)
 - An **OpenAI API key** (for `openai_openai` and `openai_gemini` configs)
 - A **Google Gemini API key** (for `gemini_gemini` and `gemini_openai` configs)
 - Sufficient disk space for chart images (~50 MB for full ChartQAPro test split)
@@ -203,9 +203,6 @@ src/agentic_chartqapro_eval/
 │   ├── dashboard.py        — Streamlit interactive dashboard: sample browser, chart image viewer
 │   └── summarize.py        — Aggregate metrics.jsonl → summary.csv
 │
-├── notebooks/
-│   └── analysis.ipynb      — Jupyter walkthrough: load MEPs, plot accuracy, visualise taxonomy
-│
 └── opik_integration/
     ├── client.py           — Opik client singleton (gracefully disabled if not configured)
     ├── tracing.py          — sample_trace(), open_llm_span(), close_span() helpers
@@ -218,14 +215,20 @@ src/agentic_chartqapro_eval/
 
 ## Getting Started
 
-### 1. Create and activate the virtual environment
+### 1. Create and activate the virtual environment inside the folder:
 
+<!-- # python3 -m venv .venv
+# source .venv/bin/activate
+# pip install -e .
+
+# # Add the virtual environment to Jupyter kernel (optional but recommended)
+# python -m ipykernel install --user --name agentic_chartqapro_eval --display-name "Agentic ChartQA Eval" -->
 ```bash
-cd ref-imp6/
-python3 -m venv .venv
+uv sync
 source .venv/bin/activate
-pip install -r requirements.txt
-pip install -e .
+
+# Add the virtual environment to Jupyter kernel (optional but recommended)
+python -m ipykernel install --user --name agentic_chartqapro_eval --display-name "Agentic ChartQA Eval"
 ```
 
 The project uses `pyproject.toml` (PEP 517/518) at the repo root with a `setuptools` backend. `pip install -e .` installs `agentic_chartqapro_eval` in editable mode from `src/`.
