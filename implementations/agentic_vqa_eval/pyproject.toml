@@ -1,0 +1,27 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "agentic_chartqapro_eval"
+version = "0.1.0"
+requires-python = ">=3.10"
+dependencies = [
+    "crewai>=1.0",
+    "openai>=1.0",
+    "google-generativeai",
+    "datasets",
+    "pillow",
+    "pydantic>=2.0",
+    "python-dotenv",
+    "json-repair",
+    "opik",
+    "pandas",
+    "matplotlib>=3.7",
+    "streamlit>=1.32",
+    "jupyter",
+    "ipykernel",
+]
+
+[tool.setuptools.packages.find]
+where = ["src"]
