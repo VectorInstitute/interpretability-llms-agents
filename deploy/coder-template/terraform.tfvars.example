@@ -1,0 +1,13 @@
+project = "my-gcp-project" # This must match your GCP project id
+region = "us-central1"
+zone = "us-central1-a"          # Must be a zone that supports NVIDIA L4 (e.g. us-central1-a)
+pd_size = 10
+boot_disk_size = 30  # Must be large enough to extract the container image (GPU images need ~20-30 GB)
+github_repo = "github_repo_url"
+github_branch = "main"
+github_app_id = "primary-github"
+container_image = "docker_image:tag"  # CPU image (ubuntu:24.04 base), used for COS container VMs
+# GPU workspaces use the PyTorch Deep Learning VM image directly (no Docker) — see gpu_boot_image in main.tf
+jupyterlab = "true"
+codeserver = "true"
+streamlit = "true"
