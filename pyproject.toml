@@ -79,6 +79,7 @@ ref1-refresher-interpretability = [
     "baukit",
     "lore-sa",
     "xlrd>=2.0.2",
+    "grad-cam>=1.5.5",
 ]
 
 ref2-transparency-xai-toxicity = [
