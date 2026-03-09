@@ -9,7 +9,7 @@ from typing import List, Dict, Tuple
 
 import torch
 import jsonlines
-from datasets import load_from_disk, load_dataset
+from datasets import load_from_disk, load_dataset, DatasetDict
 from transformers import AutoTokenizer
 from tqdm import tqdm
 
@@ -78,7 +78,11 @@ def prepare_record(rec: dict, tokenizer: AutoTokenizer):
 
 
 def load_disk_records(path: str, limit: int = 200):
-    ds = load_from_disk(path)["train"]
+    ds = load_from_disk(path)
+
+    if isinstance(ds, DatasetDict):
+        ds = ds["train"]
+
     return [ds[i] for i in range(min(limit, len(ds)))]
 
 

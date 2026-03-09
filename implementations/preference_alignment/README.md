@@ -174,14 +174,21 @@ Once formatted properly, the rest of the pipeline (LLM-as-a-Judge → DPO → Ev
 
 1. **Load required modules**
 ```bash
+```bash
+# Option 1: If running on a cluster
 module load python/3.10.12
 module load cuda-12.4
+
+# Option 2: If running on Linux/GCP
+sudo apt update
+sudo apt install python3.10 python3.10-venv python3.10-dev
+```
 ```
 
 2. **Create and activate a virtual environment**
 ```bash
-python -m venv dpo_env
-source dpo_env/bin/activate
+python3.10 -m venv .dpo_env
+source .dpo_env/bin/activate
 ```
 
 3. **Install PyTorch with CUDA 12.4 support**
