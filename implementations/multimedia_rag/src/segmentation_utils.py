@@ -73,14 +73,28 @@ def split_precisely(input_file, output_dir, prefix, ext, segment_length, min_las
     # Run ffmpeg
     for i, (start, duration) in enumerate(segments):
         output_path = os.path.join(output_dir, f"{prefix}__{i:03d}.{ext}")
-        cmd = [
-            "ffmpeg",
-            "-ss", str(start),
-            "-t", str(duration),
-            "-i", input_file,
-            "-c", "copy",
-            output_path
-        ]
+        if ext == "wav":
+            cmd = [
+                "ffmpeg",
+                "-y",
+                "-ss", str(start),
+                "-t", str(duration),
+                "-i", input_file,
+                "-ac", "1",
+                "-ar", "16000",
+                "-c:a", "pcm_s16le",
+                output_path
+            ]
+        else:
+            cmd = [
+                "ffmpeg",
+                "-y",
+                "-ss", str(start),
+                "-t", str(duration),
+                "-i", input_file,
+                "-c", "copy",
+                output_path
+            ]
         subprocess.run(cmd, check=True)
 
 def split_video(video_dir, segment_dir, segment_length, max_files: int = None):

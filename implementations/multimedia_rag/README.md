@@ -89,6 +89,12 @@ Two independent environments are required due to package conflicts between the R
 
 ---
 
+```bash
+# If ffmpeg is not installed, install it for video/audio processing
+sudo apt update
+sudo apt install ffmpeg
+```
+
 ### A. Ref5 – Video RAG (Retrieval)
 
 Used for:
@@ -98,6 +104,7 @@ Used for:
 * Top-k retrieval
 
 ```bash
+python3 -m venv .venv-rag
 source .venv-rag/bin/activate
 uv sync --group ref5-multimedia-rag-vlm --active
 pip install ipykernel
@@ -119,6 +126,7 @@ Used for:
 * Answer generation over retrieved segments
 
 ```bash
+python3 -m venv .venv-qa
 source .venv-qa/bin/activate
 uv sync --group ref5-multimedia-rag-vlm-qa --active
 pip install ipykernel
