@@ -146,12 +146,12 @@ This framework produces explainability signals at four distinct levels:
 | Package | Version | Purpose |
 |---|---|---|
 | `crewai` | 1.10.1 | Multi-agent framework: Agent, Task, Crew, LLM, BaseTool |
-| `openai` | 2.24.0 | GPT-4o planner and vision inference |
+| `openai` | 2.26.0 | GPT-4o planner and vision inference |
 | `google-generativeai` | 0.8.6 | Gemini planner and vision inference |
-| `datasets` | 2.19.2 | HuggingFace dataset loader for ChartQAPro |
+| `datasets` | 4.6.1 | HuggingFace dataset loader for ChartQAPro |
 | `pillow` | 12.1.1 | Image handling and format conversion |
-| `pydantic` | 2.12.5 | Tool input validation and schema enforcement |
-| `json_repair` | 0.58.3 | Fallback JSON parsing when LLM output is malformed |
+| `pydantic` | 2.11.10 | Tool input validation and schema enforcement |
+| `json_repair` | 0.25.3 | Fallback JSON parsing when LLM output is malformed |
 | `python-dotenv` | 1.1.1 | API key management via `.env` file |
 | `pandas` | 2.3.3 | Metric aggregation and summary CSV generation |
 | `opik` | latest | Trace visualization, prompt versioning, dataset registration |
@@ -488,13 +488,78 @@ Trace: chartqapro/000002  [openai_openai | standard | 11.4s]
         output: {verdict: "confirmed" | "revised", answer, reasoning}
 ```
 
-### 1. Start the self-hosted Opik stack
+### 1. Intall and Setup Docker
+
+#### Update packages and install Docker.
+
+```bash
+sudo apt update
+sudo apt install -y docker.io
+```
+
+Verify installation:
+
+```bash
+docker --version
+```
+
+#### Start the Docker daemon
+
+Some cloud environments do not run systemd, so start Docker manually.
+
+```bash
+sudo dockerd > /tmp/dockerd.log 2>&1 &
+```
+
+Verify Docker is running:
+
+```bash
+sudo docker info
+```
+
+#### Install Docker Compose v2
+
+Create plugin directory:
+
+```bash
+sudo mkdir -p /usr/lib/docker/cli-plugins
+```
+
+Download the Compose plugin:
+
+```bash
+sudo curl -SL https://github.com/docker/compose/releases/download/v2.27.0/docker-compose-linux-x86_64 \
+-o /usr/lib/docker/cli-plugins/docker-compose
+```
+
+Make it executable:
+
+```bash
+sudo chmod +x /usr/lib/docker/cli-plugins/docker-compose
+```
+
+Verify installation:
+
+```bash
+docker compose version
+```
+
+Expected output example:
+
+```
+Docker Compose version v2.27.0
+```
+
+### 2. Start the self-hosted Opik stack
 
 Requires Docker Desktop (already running if you followed setup above).
 
 ```bash
+# Clone the Opik repository.
 git clone https://github.com/comet-ml/opik.git /tmp/opik-server --depth=1
+# Navigate to the Docker deployment directory:
 cd /tmp/opik-server/deployment/docker-compose
+# Start the Opik stack with the 'opik' profile:
 docker compose --profile opik up -d
 ```
 
@@ -502,7 +567,49 @@ Dashboard is available at **http://localhost:5173** once all containers are heal
 
 To stop: `docker compose --profile opik down`
 
-### 2. Configure the connection
+#### Verify containers
+
+Check running containers:
+
+```bash
+sudo docker ps
+```
+
+You should see containers similar to:
+
+```
+opik-frontend-1
+opik-backend-1
+opik-python-backend-1
+opik-mysql-1
+opik-redis-1
+opik-clickhouse-1
+```
+
+#### Access Opik
+
+Get your VM external IP:
+
+```bash
+curl ifconfig.me
+```
+
+Open the Opik UI in your browser:
+
+```
+http://<VM_EXTERNAL_IP>:5173
+```
+
+Example:
+
+```
+http://34.xx.xx.xxx:5173
+```
+
+You should now see the **Comet Opik dashboard**.
+
+
+### 3. Configure the connection
 
 Add to your `.env`:
 
@@ -512,7 +619,7 @@ OPIK_URL_OVERRIDE=http://localhost:5173/api
 
 The framework auto-detects this variable. If it is absent, all Opik calls are silent no-ops and the pipeline runs exactly as before.
 
-### 3. Push prompt versions to Opik
+### 4. Push prompt versions to Opik
 
 Run once before starting experiments. This creates versioned entries for `planner.txt` and `vision.txt` in the Opik Prompt Library so every future experiment links to the exact prompt version used.
 
@@ -520,7 +627,7 @@ Run once before starting experiments. This creates versioned entries for `planne
 python -m agentic_chartqapro_eval.opik_integration.prompts
 ```
 
-### 4. Register the dataset
+### 5. Register the dataset
 
 ```bash
 python -m agentic_chartqapro_eval.opik_integration.dataset \
@@ -529,7 +636,7 @@ python -m agentic_chartqapro_eval.opik_integration.dataset \
 
 This creates a dataset named `ChartQAPro_test` in Opik containing one item per sample (question, expected output, question type, image path).
 
-### 5. Live tracing (automatic on new runs)
+### 6. Live tracing (automatic on new runs)
 
 No extra flags needed. When `OPIK_URL_OVERRIDE` is set, the pipeline automatically:
 - registers the dataset and versions the prompts at run start
@@ -542,7 +649,7 @@ python -m agentic_chartqapro_eval.runner.run_generate_meps \
     --split test --n 25 --config openai_openai --workers 4 --out meps/
 ```
 
-### 6. Attach evaluation scores
+### 7. Attach evaluation scores
 
 After running `eval_outputs.py`, accuracy and judge scores are automatically written back to the Opik traces:
 
@@ -552,7 +659,7 @@ python -m agentic_chartqapro_eval.eval.eval_outputs \
     --out metrics.jsonl
 ```
 
-### 7. Ingest existing MEPs (retroactive)
+### 8. Ingest existing MEPs (retroactive)
 
 If you have MEPs from runs before Opik was configured, import them without re-running the pipeline:
 
@@ -575,6 +682,8 @@ Each MEP file is a self-contained JSON evaluation artifact:
   "config": {
     "planner_backend": "openai",
     "vision_backend": "openai",
+    "judge_backend": "openai",
+    "config_name": "openai_openai",
     "planner_model": "gpt-4o",
     "vision_model": "gpt-4o"
   },
