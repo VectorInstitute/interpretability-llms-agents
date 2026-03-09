@@ -560,7 +560,7 @@ git clone https://github.com/comet-ml/opik.git /tmp/opik-server --depth=1
 # Navigate to the Docker deployment directory:
 cd /tmp/opik-server/deployment/docker-compose
 # Start the Opik stack with the 'opik' profile:
-docker compose --profile opik up -d
+sudo docker compose --profile opik up -d
 ```
 
 Dashboard is available at **http://localhost:5173** once all containers are healthy (takes ~60 seconds on first pull).
