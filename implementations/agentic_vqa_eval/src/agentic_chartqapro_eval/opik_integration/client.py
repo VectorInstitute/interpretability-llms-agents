@@ -5,7 +5,7 @@ installed, so every caller can guard with ``if client:``.
 """
 
 import os
-from typing import Optional
+
 
 _client = None
 _initialised = False
@@ -13,19 +13,20 @@ _initialised = False
 
 def get_client():
     """Return a configured opik.Opik() instance, or None if unavailable."""
-    global _client, _initialised
+    global _client, _initialised  # noqa: PLW0603
     if _initialised:
         return _client
 
     _initialised = True
-    
+
     # Load environment variables from .env file
     try:
         from dotenv import load_dotenv
+
         load_dotenv()
     except ImportError:
         pass  # dotenv not available, continue with system env vars
-    
+
     url = os.environ.get("OPIK_URL_OVERRIDE", "")
     api_key = os.environ.get("OPIK_API_KEY", "")
 
@@ -40,7 +41,9 @@ def get_client():
             base_url = url.rstrip("/")
             if base_url.endswith("/api"):
                 base_url = base_url[:-4]
-            opik.configure(url=base_url, use_local=True, force=True, automatic_approvals=True)
+            opik.configure(
+                url=base_url, use_local=True, force=True, automatic_approvals=True
+            )
         else:
             opik.configure(api_key=api_key, force=True, automatic_approvals=True)
 
@@ -54,6 +57,6 @@ def get_client():
 
 def reset_client() -> None:
     """Force re-initialisation on next call (useful for tests)."""
-    global _client, _initialised
+    global _client, _initialised  # noqa: PLW0603
     _client = None
     _initialised = False

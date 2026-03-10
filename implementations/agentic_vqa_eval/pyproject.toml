@@ -108,3 +108,8 @@ max-doc-length = 88
 markers = [
     "integration_test: marks tests as integration tests",
 ]
+
+[dependency-groups]
+dev = [
+    "mypy>=1.19.1",
+]

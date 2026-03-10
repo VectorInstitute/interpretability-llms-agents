@@ -6,7 +6,7 @@ Usage:
 """
 
 import argparse
-from typing import List, Optional
+from typing import Optional
 
 from .client import get_client
 
@@ -29,7 +29,7 @@ def register_dataset(
         dataset = client.get_or_create_dataset(name=name)
         items = [
             {
-                "source_id": s.sample_id,   # stored as data field; Opik auto-generates UUID v7 id
+                "source_id": s.sample_id,  # stored as data field; Opik auto-generates UUID v7 id
                 "question": s.question,
                 "expected_output": s.expected_output,
                 "question_type": s.question_type.value,
@@ -47,7 +47,10 @@ def register_dataset(
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Register ChartQAPro samples as Opik dataset")
+    """Register ChartQAPro dataset samples in Opik."""
+    parser = argparse.ArgumentParser(
+        description="Register ChartQAPro samples as Opik dataset"
+    )
     parser.add_argument("--split", default="test")
     parser.add_argument("--n", type=int, default=25)
     parser.add_argument("--image_dir", default="data/chartqapro_images")
@@ -56,7 +59,9 @@ def main() -> None:
 
     from ..datasets.chartqapro_loader import load_chartqapro
 
-    samples = load_chartqapro(split=args.split, n=args.n, image_dir=args.image_dir, cache_dir=args.cache_dir)
+    samples = load_chartqapro(
+        split=args.split, n=args.n, image_dir=args.image_dir, cache_dir=args.cache_dir
+    )
     register_dataset(samples, split=args.split)
 
 

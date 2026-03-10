@@ -22,6 +22,7 @@ from typing import Any, Optional, Tuple
 from ..opik_integration.tracing import close_span, open_llm_span
 from ..utils.json_strict import parse_strict
 
+
 VERIFIER_REQUIRED_KEYS = ["verdict", "answer", "reasoning"]
 
 _VERIFIER_PROMPT = """\
@@ -56,15 +57,24 @@ Output ONLY JSON, no markdown, no extra text:
 # VLM helpers (same pattern as error_taxonomy.py)
 # ---------------------------------------------------------------------------
 
+
 def _encode_image(image_path: str) -> tuple:
     ext = Path(image_path).suffix.lower().lstrip(".")
-    mime = {"jpg": "jpeg", "jpeg": "jpeg", "png": "png", "gif": "gif", "webp": "webp"}.get(ext, "jpeg")
+    mime = {
+        "jpg": "jpeg",
+        "jpeg": "jpeg",
+        "png": "png",
+        "gif": "gif",
+        "webp": "webp",
+    }.get(ext, "jpeg")
     with open(image_path, "rb") as f:
         b64 = base64.b64encode(f.read()).decode("utf-8")
     return b64, mime
 
 
-def _call_vlm_openai(prompt: str, image_path: str, model: str, api_key: Optional[str]) -> str:
+def _call_vlm_openai(
+    prompt: str, image_path: str, model: str, api_key: Optional[str]
+) -> str:
     from openai import OpenAI
 
     client = OpenAI(api_key=api_key or os.environ.get("OPENAI_API_KEY", ""))
@@ -76,7 +86,10 @@ def _call_vlm_openai(prompt: str, image_path: str, model: str, api_key: Optional
                 "role": "user",
                 "content": [
                     {"type": "text", "text": prompt},
-                    {"type": "image_url", "image_url": {"url": f"data:image/{mime};base64,{b64}"}},
+                    {
+                        "type": "image_url",
+                        "image_url": {"url": f"data:image/{mime};base64,{b64}"},
+                    },
                 ],
             }
         ],
@@ -86,7 +99,9 @@ def _call_vlm_openai(prompt: str, image_path: str, model: str, api_key: Optional
     return response.choices[0].message.content or ""
 
 
-def _call_vlm_gemini(prompt: str, image_path: str, model: str, api_key: Optional[str]) -> str:
+def _call_vlm_gemini(
+    prompt: str, image_path: str, model: str, api_key: Optional[str]
+) -> str:
     import google.generativeai as genai
     from PIL import Image
 
@@ -95,7 +110,9 @@ def _call_vlm_gemini(prompt: str, image_path: str, model: str, api_key: Optional
     image = Image.open(image_path)
     response = gemini_model.generate_content(
         [image, prompt],
-        generation_config=genai.types.GenerationConfig(temperature=0, max_output_tokens=256),
+        generation_config=genai.types.GenerationConfig(
+            temperature=0, max_output_tokens=256
+        ),
     )
     return response.text or ""
 
@@ -103,6 +120,7 @@ def _call_vlm_gemini(prompt: str, image_path: str, model: str, api_key: Optional
 # ---------------------------------------------------------------------------
 # VerifierAgent
 # ---------------------------------------------------------------------------
+
 
 class VerifierAgent:
     """
@@ -125,7 +143,7 @@ class VerifierAgent:
 
     def run(
         self,
-        sample,          # PerceivedSample
+        sample,  # PerceivedSample
         plan: dict,
         vision_parsed: dict,
         opik_trace: Any = None,
@@ -133,19 +151,24 @@ class VerifierAgent:
         """
         Verify the VisionAgent's draft answer.
 
-        Returns:
+        Returns
+        -------
             prompt       – rendered verifier prompt
             parsed       – {verdict, answer, reasoning}
             parse_error  – True if JSON parsing failed or fell back
             raw_text     – raw VLM output
         """
         plan_steps = plan.get("steps", [])
-        steps_text = "\n".join(f"  {i+1}. {s}" for i, s in enumerate(plan_steps)) or "  (none)"
+        steps_text = (
+            "\n".join(f"  {i + 1}. {s}" for i, s in enumerate(plan_steps)) or "  (none)"
+        )
 
         draft_answer = vision_parsed.get("answer", "(none)")
         draft_explanation = vision_parsed.get("explanation", "(none)")
         question_type = getattr(
-            getattr(sample, "question_type", None), "value", str(getattr(sample, "question_type", "standard"))
+            getattr(sample, "question_type", None),
+            "value",
+            str(getattr(sample, "question_type", "standard")),
         )
 
         prompt = _VERIFIER_PROMPT.format(

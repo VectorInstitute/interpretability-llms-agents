@@ -8,25 +8,28 @@ Or via the module alias added in setup.py:
 """
 
 import json
-from collections import Counter, defaultdict
 from pathlib import Path
 
 import pandas as pd
 
+
 try:
     import streamlit as st
 except ImportError:
-    raise SystemExit("Install streamlit first:  pip install streamlit matplotlib")
+    raise SystemExit(
+        "Install streamlit first:  pip install streamlit matplotlib"
+    ) from None
 
 try:
     import matplotlib.pyplot as plt
-    import matplotlib.patches as mpatches
+
     HAS_MPL = True
 except ImportError:
     HAS_MPL = False
 
 try:
-    from PIL import Image as PILImage
+    from PIL import Image  # noqa: F401
+
     HAS_PIL = True
 except ImportError:
     HAS_PIL = False
@@ -48,15 +51,22 @@ st.set_page_config(
 # Data loading (cached)
 # ---------------------------------------------------------------------------
 
+
 @st.cache_data
 def load_metrics(path: str) -> pd.DataFrame:
-    rows = [json.loads(l) for l in Path(path).read_text().splitlines() if l.strip()]
+    """Load a metrics JSONL file and return it as a DataFrame."""
+    rows = [
+        json.loads(line) for line in Path(path).read_text().splitlines() if line.strip()
+    ]
     return pd.DataFrame(rows)
 
 
 @st.cache_data
 def load_taxonomy(path: str) -> pd.DataFrame:
-    rows = [json.loads(l) for l in Path(path).read_text().splitlines() if l.strip()]
+    """Load a taxonomy JSONL file and return it as a DataFrame."""
+    rows = [
+        json.loads(line) for line in Path(path).read_text().splitlines() if line.strip()
+    ]
     return pd.DataFrame(rows)
 
 
@@ -75,7 +85,7 @@ def load_meps(mep_dir: str) -> dict:
 
 
 # ---------------------------------------------------------------------------
-# Sidebar: configuration
+# Sidebar: configuration  # noqa: ERA001
 # ---------------------------------------------------------------------------
 
 st.sidebar.title("📊 ChartQAPro Eval")
@@ -83,16 +93,17 @@ st.sidebar.markdown("---")
 st.sidebar.subheader("Data Paths")
 
 mep_dir_input = st.sidebar.text_input(
-    "MEP directory", value="meps/openai_openai/chartqapro/test",
-    help="Directory containing .json MEP files"
+    "MEP directory",
+    value="meps/openai_openai/chartqapro/test",
+    help="Directory containing .json MEP files",
 )
 metrics_input = st.sidebar.text_input(
-    "metrics.jsonl", value="output/metrics.jsonl",
-    help="Output of eval_outputs.py"
+    "metrics.jsonl", value="output/metrics.jsonl", help="Output of eval_outputs.py"
 )
 taxonomy_input = st.sidebar.text_input(
-    "taxonomy.jsonl (optional)", value="output/taxonomy.jsonl",
-    help="Output of error_taxonomy.py"
+    "taxonomy.jsonl (optional)",
+    value="output/taxonomy.jsonl",
+    help="Output of error_taxonomy.py",
 )
 
 st.sidebar.markdown("---")
@@ -121,14 +132,18 @@ if df_metrics is not None and "question_type" in df_metrics.columns:
     question_types = sorted(df_metrics["question_type"].unique().tolist())
 
 selected_types = st.sidebar.multiselect(
-    "Question types", options=question_types, default=question_types,
-    help="Filter by question type"
+    "Question types",
+    options=question_types,
+    default=question_types,
+    help="Filter by question type",
 )
 
 verdict_options = ["confirmed", "revised", "skipped"]
 selected_verdicts = st.sidebar.multiselect(
-    "Verifier verdict", options=verdict_options, default=verdict_options,
-    help="Filter by VerifierAgent verdict"
+    "Verifier verdict",
+    options=verdict_options,
+    default=verdict_options,
+    help="Filter by VerifierAgent verdict",
 )
 
 failure_types = []
@@ -155,7 +170,9 @@ with tab_overview:
     if load_errors:
         for err in load_errors:
             st.error(err)
-        st.info("Adjust the paths in the sidebar and make sure you've run the pipeline first.")
+        st.info(
+            "Adjust the paths in the sidebar and make sure you've run the pipeline first."
+        )
         st.stop()
 
     # Apply filters
@@ -176,15 +193,18 @@ with tab_overview:
     avg_lat = df["latency_sec"].mean() if "latency_sec" in df.columns else 0.0
     correct = int((df["answer_accuracy"] >= 1.0).sum())
 
-    has_verifier = "verifier_verdict" in df.columns and not df["verifier_verdict"].eq("skipped").all()
+    has_verifier = (
+        "verifier_verdict" in df.columns
+        and not df["verifier_verdict"].eq("skipped").all()
+    )
     revised_n = int((df["verifier_verdict"] == "revised").sum()) if has_verifier else 0
 
     c1, c2, c3, c4, c5 = st.columns(5)
-    c1.metric("Samples",        n)
-    c2.metric("Accuracy",       f"{avg_acc:.1%}",  f"{correct} correct")
-    c3.metric("Avg Latency",    f"{avg_lat:.1f}s")
-    c4.metric("Correct",        correct,            f"{correct/n:.1%}")
-    c5.metric("Verifier Revised", revised_n,        f"{revised_n/n:.1%}" if n else "—")
+    c1.metric("Samples", n)
+    c2.metric("Accuracy", f"{avg_acc:.1%}", f"{correct} correct")
+    c3.metric("Avg Latency", f"{avg_lat:.1f}s")
+    c4.metric("Correct", correct, f"{correct / n:.1%}")
+    c5.metric("Verifier Revised", revised_n, f"{revised_n / n:.1%}" if n else "—")
 
     st.markdown("---")
 
@@ -194,15 +214,19 @@ with tab_overview:
     with col_a:
         st.subheader("Accuracy by Question Type")
         if HAS_MPL:
-            by_type = df.groupby("question_type")["answer_accuracy"].mean().sort_values()
+            by_type = (
+                df.groupby("question_type")["answer_accuracy"].mean().sort_values()
+            )
             fig, ax = plt.subplots(figsize=(5, 3))
-            colors = ["#d63031" if v < 0.4 else "#fdcb6e" if v < 0.75 else "#00b894"
-                      for v in by_type.values]
+            colors = [
+                "#d63031" if v < 0.4 else "#fdcb6e" if v < 0.75 else "#00b894"
+                for v in by_type.values
+            ]
             ax.barh(by_type.index, by_type.values, color=colors, edgecolor="white")
             ax.set_xlim(0, 1.0)
             ax.set_xlabel("Avg Accuracy")
             ax.axvline(avg_acc, color="#6c5ce7", linestyle="--", linewidth=1.2)
-            for i, (qt, val) in enumerate(by_type.items()):
+            for i, (_qt, val) in enumerate(by_type.items()):
                 ax.text(val + 0.01, i, f"{val:.1%}", va="center", fontsize=9)
             plt.tight_layout()
             st.pyplot(fig)
@@ -215,16 +239,27 @@ with tab_overview:
         st.subheader("Verifier Verdict Distribution")
         if has_verifier and HAS_MPL:
             v_counts = df["verifier_verdict"].value_counts()
-            vc_colors = {"confirmed": "#00b894", "revised": "#fdcb6e", "skipped": "#b2bec3"}
+            vc_colors = {
+                "confirmed": "#00b894",
+                "revised": "#fdcb6e",
+                "skipped": "#b2bec3",
+            }
             fig, ax = plt.subplots(figsize=(5, 3))
             bars = ax.bar(
-                v_counts.index, v_counts.values,
+                v_counts.index,
+                v_counts.values,
                 color=[vc_colors.get(k, "#6c5ce7") for k in v_counts.index],
-                edgecolor="white", width=0.5,
+                edgecolor="white",
+                width=0.5,
             )
             for bar in bars:
-                ax.text(bar.get_x() + bar.get_width()/2, bar.get_height() + 0.1,
-                        str(int(bar.get_height())), ha="center", fontsize=10)
+                ax.text(
+                    bar.get_x() + bar.get_width() / 2,
+                    bar.get_height() + 0.1,
+                    str(int(bar.get_height())),
+                    ha="center",
+                    fontsize=10,
+                )
             ax.set_ylabel("Count")
             plt.tight_layout()
             st.pyplot(fig)
@@ -248,16 +283,27 @@ with tab_overview:
             if HAS_MPL:
                 counts = tax["failure_type"].value_counts()
                 palette = {
-                    "correct": "#00b894", "extraction_error": "#e84393",
-                    "axis_misread": "#e17055", "arithmetic_mistake": "#fdcb6e",
-                    "legend_confusion": "#fd79a8", "hallucinated_element": "#d63031",
+                    "correct": "#00b894",
+                    "extraction_error": "#e84393",
+                    "axis_misread": "#e17055",
+                    "arithmetic_mistake": "#fdcb6e",
+                    "legend_confusion": "#fd79a8",
+                    "hallucinated_element": "#d63031",
                     "unanswerable_failure": "#0984e3",
-                    "question_misunderstanding": "#6c5ce7", "other": "#b2bec3",
+                    "question_misunderstanding": "#6c5ce7",
+                    "other": "#b2bec3",
                 }
                 fig, ax = plt.subplots(figsize=(7, 4))
                 bar_colors = [palette.get(k, "#6c5ce7") for k in counts.index[::-1]]
-                ax.barh(counts.index[::-1], counts.values[::-1], color=bar_colors, edgecolor="white")
-                for i, (ft, c) in enumerate(zip(counts.index[::-1], counts.values[::-1])):
+                ax.barh(
+                    counts.index[::-1],
+                    counts.values[::-1],
+                    color=bar_colors,
+                    edgecolor="white",
+                )
+                for i, (_ft, c) in enumerate(
+                    zip(counts.index[::-1], counts.values[::-1])
+                ):
                     ax.text(c + 0.1, i, str(c), va="center", fontsize=9)
                 ax.set_xlabel("Count")
                 plt.tight_layout()
@@ -269,20 +315,37 @@ with tab_overview:
         with col_d:
             st.dataframe(
                 tax["failure_type"].value_counts().rename("count").reset_index(),
-                use_container_width=True, height=300
+                use_container_width=True,
+                height=300,
             )
 
     # ── Judge scores ──────────────────────────────────────────────────────
-    judge_cols = [c for c in df.columns if c.startswith("judge_") and df[c].dtype in ["float64", "int64"]]
+    judge_cols = [
+        c
+        for c in df.columns
+        if c.startswith("judge_") and df[c].dtype in ["float64", "int64"]
+    ]
     if judge_cols:
         st.markdown("---")
         st.subheader("LLM Judge Rubric Scores")
-        judge_means = df[judge_cols].mean().rename(lambda c: c.replace("judge_", "").replace("_", " ").title())
-        st.dataframe(judge_means.round(3).to_frame("Mean Score"), use_container_width=False)
+        judge_means = (
+            df[judge_cols]
+            .mean()
+            .rename(lambda c: c.replace("judge_", "").replace("_", " ").title())
+        )
+        st.dataframe(
+            judge_means.round(3).to_frame("Mean Score"), use_container_width=False
+        )
 
         if HAS_MPL:
             fig, ax = plt.subplots(figsize=(8, 3))
-            ax.bar(judge_means.index, judge_means.values, color="#6c5ce7", edgecolor="white", alpha=0.85)
+            ax.bar(
+                judge_means.index,
+                judge_means.values,
+                color="#6c5ce7",
+                edgecolor="white",
+                alpha=0.85,
+            )
             ax.set_ylim(0, 1.0)
             ax.set_ylabel("Score")
             ax.set_title("Judge Scores (mean)")
@@ -298,7 +361,9 @@ with tab_browser:
     st.subheader("Sample Browser")
 
     if not meps:
-        st.error(f"No MEPs loaded from `{mep_dir_input}`. Check the path in the sidebar.")
+        st.error(
+            f"No MEPs loaded from `{mep_dir_input}`. Check the path in the sidebar."
+        )
         st.stop()
 
     # Merge metrics into browser if available
@@ -309,13 +374,21 @@ with tab_browser:
         metrics_by_id = {}
 
     if df_tax is not None:
-        tax_by_id = df_tax.set_index("sample_id").to_dict("index") if "sample_id" in df_tax.columns else {}
+        tax_by_id = (
+            df_tax.set_index("sample_id").to_dict("index")
+            if "sample_id" in df_tax.columns
+            else {}
+        )
     else:
         tax_by_id = {}
 
     # Filter sample IDs based on sidebar filter
     if selected_types and df_metrics is not None:
-        valid_ids = set(df_metrics[df_metrics["question_type"].isin(selected_types)]["sample_id"].tolist())
+        valid_ids = set(
+            df_metrics[df_metrics["question_type"].isin(selected_types)][
+                "sample_id"
+            ].tolist()
+        )
         sample_ids = [s for s in sample_ids if s in valid_ids]
 
     if not sample_ids:
@@ -325,12 +398,12 @@ with tab_browser:
     selected_id = st.selectbox("Select sample", sample_ids)
     mep = meps[selected_id]
 
-    sample   = mep.get("sample", {})
-    plan     = mep.get("plan", {}).get("parsed", {})
-    vision   = mep.get("vision", {}).get("parsed", {})
+    sample = mep.get("sample", {})
+    plan = mep.get("plan", {}).get("parsed", {})
+    vision = mep.get("vision", {}).get("parsed", {})
     verifier = (mep.get("verifier") or {}).get("parsed", {})
     timestamps = mep.get("timestamps", {})
-    errors   = mep.get("errors", [])
+    errors = mep.get("errors", [])
 
     m_row = metrics_by_id.get(selected_id, {})
     t_row = tax_by_id.get(selected_id, {})
@@ -341,7 +414,9 @@ with tab_browser:
         # Chart image
         img_path = sample.get("image_ref", {}).get("path", "")
         if img_path and Path(img_path).exists() and HAS_PIL:
-            st.image(img_path, caption=f"Chart: {selected_id}", use_container_width=True)
+            st.image(
+                img_path, caption=f"Chart: {selected_id}", use_container_width=True
+            )
         elif img_path:
             st.warning(f"Image not found: {img_path}")
         else:
@@ -350,7 +425,9 @@ with tab_browser:
     with col_right:
         # Sample metadata
         st.markdown(f"**Question:** {sample.get('question', '—')}")
-        st.markdown(f"**Type:** `{sample.get('question_type', '—')}` &nbsp;|&nbsp; **Expected:** `{sample.get('expected_output', '—')}`")
+        st.markdown(
+            f"**Type:** `{sample.get('question_type', '—')}` &nbsp;|&nbsp; **Expected:** `{sample.get('expected_output', '—')}`"
+        )
 
         # Accuracy badge
         acc = m_row.get("answer_accuracy", None)
@@ -374,7 +451,13 @@ with tab_browser:
         # Verifier
         if verifier:
             verdict = verifier.get("verdict", "—")
-            v_color = "green" if verdict == "confirmed" else "orange" if verdict == "revised" else "gray"
+            v_color = (
+                "green"
+                if verdict == "confirmed"
+                else "orange"
+                if verdict == "revised"
+                else "gray"
+            )
             with st.expander(f"VerifierAgent — :{v_color}[{verdict}]", expanded=True):
                 st.markdown(f"**Final answer:** `{verifier.get('answer', '—')}`")
                 st.markdown(f"**Reasoning:** {verifier.get('reasoning', '—')}")
@@ -388,16 +471,18 @@ with tab_browser:
 
         # Latency
         if timestamps:
-            total_ms = sum([
-                timestamps.get("planner_ms", 0),
-                timestamps.get("vision_ms", 0),
-                timestamps.get("verifier_ms", 0),
-            ])
+            total_ms = sum(
+                [
+                    timestamps.get("planner_ms", 0),
+                    timestamps.get("vision_ms", 0),
+                    timestamps.get("verifier_ms", 0),
+                ]
+            )
             st.caption(
                 f"Latency — planner: {timestamps.get('planner_ms', 0):.0f}ms  "
                 f"vision: {timestamps.get('vision_ms', 0):.0f}ms  "
                 f"verifier: {timestamps.get('verifier_ms', 0):.0f}ms  "
-                f"**total: {total_ms/1000:.2f}s**"
+                f"**total: {total_ms / 1000:.2f}s**"
             )
 
         # Errors

@@ -9,8 +9,9 @@ Usage:
 """
 
 import argparse
+import contextlib
 import json
-from datetime import datetime, timezone
+from datetime import datetime
 from pathlib import Path
 from typing import Optional
 
@@ -26,7 +27,12 @@ def _parse_ts(iso: Optional[str]) -> Optional[datetime]:
         return None
 
 
-def ingest_mep(mep: dict, client, metrics: Optional[dict] = None, project_name: str = "chartqapro-eval") -> None:
+def ingest_mep(
+    mep: dict,
+    client,
+    metrics: Optional[dict] = None,
+    project_name: str = "chartqapro-eval",
+) -> None:
     """Create an Opik Trace from a single MEP dict (retroactively)."""
     sample = mep.get("sample", {})
     plan = mep.get("plan", {})
@@ -44,7 +50,6 @@ def ingest_mep(mep: dict, client, metrics: Optional[dict] = None, project_name: 
     start_time = _parse_ts(timestamps.get("start"))
     end_time = _parse_ts(timestamps.get("end"))
     planner_ms = timestamps.get("planner_ms") or 0
-    vision_ms = timestamps.get("vision_ms") or 0
 
     trace = client.trace(
         name=f"chartqapro/{sample_id}",
@@ -69,6 +74,7 @@ def ingest_mep(mep: dict, client, metrics: Optional[dict] = None, project_name: 
         p_end = None
         if start_time and planner_ms:
             from datetime import timedelta
+
             p_end = start_time + timedelta(milliseconds=planner_ms)
         planner_span = trace.span(
             name="planner",
@@ -95,7 +101,10 @@ def ingest_mep(mep: dict, client, metrics: Optional[dict] = None, project_name: 
             type="llm",
             start_time=ts_start,
             end_time=ts_end,
-            input={"question": question, "plan_steps": plan.get("parsed", {}).get("steps", [])},
+            input={
+                "question": question,
+                "plan_steps": plan.get("parsed", {}).get("steps", []),
+            },
             output=vision_parsed if vision_parsed else None,
             model=tt.get("model", config.get("vision_model", "")),
             usage=usage if usage else None,
@@ -122,10 +131,8 @@ def ingest_mep(mep: dict, client, metrics: Optional[dict] = None, project_name: 
             if key in metrics and isinstance(metrics[key], (int, float)):
                 scores_to_log[key] = float(metrics[key])
         for name, value in scores_to_log.items():
-            try:
+            with contextlib.suppress(Exception):
                 trace.log_feedback_score(name=name, value=value)
-            except Exception:
-                pass
 
 
 def ingest_dir(
@@ -143,8 +150,8 @@ def ingest_dir(
     metrics_by_id: dict = {}
     if metrics_file and Path(metrics_file).exists():
         with open(metrics_file) as f:
-            for line in f:
-                line = line.strip()
+            for raw_line in f:
+                line = raw_line.strip()
                 if line:
                     row = json.loads(line)
                     metrics_by_id[row.get("sample_id", "")] = row
@@ -160,25 +167,37 @@ def ingest_dir(
         try:
             mep = json.loads(fpath.read_text())
             sample_id = mep.get("sample", {}).get("sample_id", "")
-            ingest_mep(mep, client, metrics=metrics_by_id.get(sample_id), project_name=project_name)
+            ingest_mep(
+                mep,
+                client,
+                metrics=metrics_by_id.get(sample_id),
+                project_name=project_name,
+            )
             count += 1
             print(f"  ingested {sample_id}")
         except Exception as exc:
             print(f"  ERROR {fpath.name}: {exc}")
 
     print(f"[opik] Ingested {count}/{len(mep_files)} MEPs from {mep_dir}")
-    try:
+    with contextlib.suppress(Exception):
         client.flush()
-    except Exception:
-        pass
     return count
 
 
 def main() -> None:
+    """Parse CLI arguments and ingest MEP files into Opik."""
     parser = argparse.ArgumentParser(description="Ingest existing MEPs into Opik")
-    parser.add_argument("--mep_dir", required=True, help="Directory containing MEP JSON files")
-    parser.add_argument("--metrics_file", default=None, help="Optional metrics.jsonl for feedback scores")
-    parser.add_argument("--project", default="chartqapro-eval", help="Opik project name")
+    parser.add_argument(
+        "--mep_dir", required=True, help="Directory containing MEP JSON files"
+    )
+    parser.add_argument(
+        "--metrics_file",
+        default=None,
+        help="Optional metrics.jsonl for feedback scores",
+    )
+    parser.add_argument(
+        "--project", default="chartqapro-eval", help="Opik project name"
+    )
     args = parser.parse_args()
 
     ingest_dir(args.mep_dir, args.metrics_file, project_name=args.project)

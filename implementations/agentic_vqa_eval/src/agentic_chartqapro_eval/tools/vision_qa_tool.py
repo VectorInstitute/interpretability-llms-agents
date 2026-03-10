@@ -6,6 +6,7 @@ via `tool.pop_traces()` after the Crew finishes.
 """
 
 import base64
+import json
 import time
 from datetime import datetime, timezone
 from pathlib import Path
@@ -16,11 +17,21 @@ from pydantic import BaseModel, Field, PrivateAttr
 
 
 class VisionQAInput(BaseModel):
-    image_path: str = Field(description="Absolute or relative path to the chart image file")
+    """Input schema for VisionQATool."""
+
+    image_path: str = Field(
+        description="Absolute or relative path to the chart image file"
+    )
     question: str = Field(description="The question to answer about the chart")
-    plan_steps: List[str] = Field(description="Ordered inspection steps from the planner")
-    choices: Optional[List[str]] = Field(default=None, description="MCQ answer choices if applicable")
-    context: Optional[List[dict]] = Field(default=None, description="Prior conversation turns")
+    plan_steps: List[str] = Field(
+        description="Ordered inspection steps from the planner"
+    )
+    choices: Optional[List[str]] = Field(
+        default=None, description="MCQ answer choices if applicable"
+    )
+    context: Optional[List[dict]] = Field(
+        default=None, description="Prior conversation turns"
+    )
 
 
 class VisionQATool(BaseTool):
@@ -35,7 +46,7 @@ class VisionQATool(BaseTool):
     args_schema: Type[BaseModel] = VisionQAInput
 
     # Public config fields
-    backend: str = "openai"       # "openai" | "gemini"
+    backend: str = "openai"  # "openai" | "gemini"
     model: str = "gpt-4o"
     api_key: str = ""
     opik_trace: Optional[Any] = None  # Opik Trace object for span creation
@@ -61,6 +72,10 @@ class VisionQATool(BaseTool):
         choices: Optional[List[str]] = None,
         context: Optional[List[dict]] = None,
     ) -> str:
+        """Run the vision QA tool with the given inputs.
+
+        Handles tracing and error capture.
+        """
         from ..opik_integration.tracing import close_span, open_llm_span
 
         start_ts = datetime.now(timezone.utc).isoformat()
@@ -69,7 +84,11 @@ class VisionQATool(BaseTool):
         opik_span = open_llm_span(
             self.opik_trace,
             name="vision_qa_tool",
-            input_data={"image_path": image_path, "question": question, "plan_steps": plan_steps},
+            input_data={
+                "image_path": image_path,
+                "question": question,
+                "plan_steps": plan_steps,
+            },
             model=self.model,
             metadata={"backend": self.backend},
         )
@@ -88,7 +107,9 @@ class VisionQATool(BaseTool):
             else:
                 raise ValueError(f"Unknown backend: {self.backend!r}")
         except Exception as exc:
-            raw_text = f'{{"answer": "ERROR", "explanation": "Tool error: {exc}"}}'
+            raw_text = json.dumps(
+                {"answer": "ERROR", "explanation": f"Tool error: {exc}"}
+            )
             provider_meta = {"error": str(exc)}
             error_str = str(exc)
 
@@ -130,6 +151,10 @@ class VisionQATool(BaseTool):
         choices: Optional[List[str]],
         context: Optional[List[dict]],
     ) -> str:
+        """Construct a VLM prompt.
+
+        Uses the question, plan steps, choices, and context.
+        """
         parts: list = []
 
         if context:
@@ -148,9 +173,9 @@ class VisionQATool(BaseTool):
             parts.append(f"  {i}. {step}")
 
         parts.append(
-            '\nOutput ONLY this JSON (no markdown, no extra text):\n'
+            "\nOutput ONLY this JSON (no markdown, no extra text):\n"
             '{"answer": "...", "explanation": "..."}\n'
-            'If the question cannot be answered from the chart: '
+            "If the question cannot be answered from the chart: "
             '{"answer": "UNANSWERABLE", "explanation": "..."}'
         )
 
@@ -161,10 +186,15 @@ class VisionQATool(BaseTool):
     # ------------------------------------------------------------------
 
     def _encode_image(self, image_path: str) -> tuple:
+        """Encode an image as base64 and determine its MIME type."""
         ext = Path(image_path).suffix.lower().lstrip(".")
-        mime = {"jpg": "jpeg", "jpeg": "jpeg", "png": "png", "gif": "gif", "webp": "webp"}.get(
-            ext, "jpeg"
-        )
+        mime = {
+            "jpg": "jpeg",
+            "jpeg": "jpeg",
+            "png": "png",
+            "gif": "gif",
+            "webp": "webp",
+        }.get(ext, "jpeg")
         with open(image_path, "rb") as f:
             b64 = base64.b64encode(f.read()).decode("utf-8")
         return b64, mime
@@ -177,6 +207,7 @@ class VisionQATool(BaseTool):
         choices: Optional[List[str]],
         context: Optional[List[dict]],
     ) -> tuple:
+        """Call the OpenAI vision API and return raw text and provider metadata."""
         import os
 
         from openai import OpenAI
@@ -223,6 +254,7 @@ class VisionQATool(BaseTool):
         choices: Optional[List[str]],
         context: Optional[List[dict]],
     ) -> tuple:
+        """Call the Gemini vision API and return raw text and provider metadata."""
         import os
 
         import google.generativeai as genai
@@ -243,7 +275,9 @@ class VisionQATool(BaseTool):
 
         raw_text = response.text or ""
         finish = (
-            str(response.candidates[0].finish_reason) if response.candidates else "unknown"
+            str(response.candidates[0].finish_reason)
+            if response.candidates
+            else "unknown"
         )
         provider_meta = {
             "model": self.model,

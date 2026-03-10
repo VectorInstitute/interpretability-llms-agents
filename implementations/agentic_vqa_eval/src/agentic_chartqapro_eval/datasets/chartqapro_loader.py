@@ -21,6 +21,7 @@ from .perceived_sample import (
     QuestionType,
 )
 
+
 # Map raw dataset question types to our canonical types
 _TYPE_MAP = {
     "factoid": QuestionType.STANDARD,
@@ -52,6 +53,7 @@ def _save_image(image, idx: int, img_dir: Path) -> str:
         return str(path)
     try:
         from PIL import Image as PILImage
+
         if isinstance(image, PILImage.Image):
             image.save(str(path))
         elif isinstance(image, bytes):
@@ -65,11 +67,13 @@ def _save_image(image, idx: int, img_dir: Path) -> str:
                     f.write(raw)
             elif isinstance(raw, str) and raw:
                 import shutil
+
                 shutil.copy(raw, str(path))
             else:
                 raise ValueError(f"Unknown image dict keys: {list(image.keys())}")
         else:
             import numpy as np
+
             PILImage.fromarray(np.array(image)).save(str(path))
         return str(path)
     except Exception as e:
@@ -153,16 +157,15 @@ def _normalize_row(row_idx: int, row: dict, img_dir: Path) -> List[PerceivedSamp
             if i < len(answers):
                 prev.append(answers[i])
         return [_make_sample(turn_idx, prev)]
-    else:
-        # Conversational: one sample per turn
-        samples = []
-        prev = []
-        for turn_idx in range(len(questions)):
-            samples.append(_make_sample(turn_idx, list(prev)))
-            prev.append(questions[turn_idx])
-            if turn_idx < len(answers):
-                prev.append(answers[turn_idx])
-        return samples
+    # Conversational: one sample per turn
+    samples = []
+    prev = []
+    for turn_idx in range(len(questions)):
+        samples.append(_make_sample(turn_idx, list(prev)))
+        prev.append(questions[turn_idx])
+        if turn_idx < len(answers):
+            prev.append(answers[turn_idx])
+    return samples
 
 
 def load_chartqapro(

@@ -1,4 +1,4 @@
-"""Pass 1: output-based evaluation — rule-based accuracy + LLM judge rubric.
+r"""Pass 1: output-based evaluation — rule-based accuracy + LLM judge rubric.
 
 Usage:
     python -m agentic_chartqapro_eval.eval.eval_outputs \\
@@ -7,7 +7,10 @@ Usage:
 """
 
 import argparse
+import contextlib
 import json
+import math
+import os
 import re
 from typing import Optional
 
@@ -15,9 +18,8 @@ from dotenv import load_dotenv
 
 from ..mep.writer import iter_meps
 from ..opik_integration.client import get_client
-from ..opik_integration.tracing import log_trace_scores
 from .judge import judge_mep
-import os
+
 
 load_dotenv()
 
@@ -26,11 +28,11 @@ load_dotenv()
 # Rule-based scorers
 # ---------------------------------------------------------------------------
 
+
 def _normalize(text: str) -> str:
     text = text.strip().lower()
     text = re.sub(r"[^\w\s\-\.]", "", text)
-    text = re.sub(r"\s+", " ", text).strip()
-    return text
+    return re.sub(r"\s+", " ", text).strip()
 
 
 def _to_number(text: str) -> Optional[float]:
@@ -50,17 +52,23 @@ def score_answer_accuracy(expected: str, predicted: str, question_type: str) -> 
     if exp == pred:
         return 1.0
 
+    # Numeric tolerance check (5% relative, 0.5 absolute for small values)
+    exp_num = _to_number(exp)
+    pred_num = _to_number(pred)
+    if exp_num is not None and pred_num is not None:
+        if math.isclose(exp_num, pred_num, rel_tol=0.05, abs_tol=0.5):
+            return 1.0
+
     # MCQ substring check
-    if question_type == "mcq":
-        if exp in pred or pred in exp:
-            return 0.5
+    if question_type == "mcq" and (exp in pred or pred in exp):
+        return 0.5
 
     return 0.0
 
 
 def score_unanswerable(expected: str, predicted: str) -> Optional[float]:
-    """
-    Binary classification score for unanswerable samples.
+    """Score binary classification for unanswerable samples.
+
     Returns None if expected is NOT UNANSWERABLE (metric not applicable).
     """
     exp_ua = expected.strip().upper() == "UNANSWERABLE"
@@ -74,12 +82,14 @@ def score_unanswerable(expected: str, predicted: str) -> Optional[float]:
 # Per-MEP evaluation
 # ---------------------------------------------------------------------------
 
+
 def evaluate_mep(
     mep: dict,
     use_judge: bool = True,
     judge_backend: str = "openai",
     judge_model: str = "gpt-4o",
 ) -> dict:
+    """Evaluate a single MEP and return a metrics dict."""
     sample = mep.get("sample", {})
     plan = mep.get("plan", {})
     vision = mep.get("vision", {})
@@ -106,11 +116,14 @@ def evaluate_mep(
         "config_name": config.get("config_name", ""),
         "expected": expected,
         "predicted": predicted,
-        "vision_answer": vision_parsed.get("answer", ""),   # raw vision answer pre-verification
+        "vision_answer": vision_parsed.get(
+            "answer", ""
+        ),  # raw vision answer pre-verification
         "verifier_verdict": verifier_verdict,
         "planner_parse_ok": not plan.get("parse_error", True),
         "vision_parse_ok": not vision.get("parse_error", True),
-        "json_parse_ok": (not plan.get("parse_error", True)) and (not vision.get("parse_error", True)),
+        "json_parse_ok": (not plan.get("parse_error", True))
+        and (not vision.get("parse_error", True)),
         "answer_accuracy": score_answer_accuracy(expected, predicted, question_type),
         "latency_sec": (planner_ms + vision_ms + verifier_ms) / 1000.0,
         "tool_call_count": len(vision.get("tool_trace", [])),
@@ -134,13 +147,18 @@ def evaluate_mep(
             score_keys = ["answer_accuracy", "latency_sec"] + (
                 [f"judge_{k}" for k in judge_scores] if use_judge else []
             )
-            scores = {k: metrics[k] for k in score_keys if isinstance(metrics.get(k), (int, float))}
-            try:
+            scores = {
+                k: metrics[k]
+                for k in score_keys
+                if isinstance(metrics.get(k), (int, float))
+            }
+            with contextlib.suppress(Exception):
                 client.log_traces_feedback_scores(
-                    [{"id": opik_trace_id, "name": k, "value": float(v)} for k, v in scores.items()]
+                    [
+                        {"id": opik_trace_id, "name": k, "value": float(v)}
+                        for k, v in scores.items()
+                    ]
                 )
-            except Exception:
-                pass
 
     return metrics
 
@@ -149,18 +167,28 @@ def evaluate_mep(
 # CLI
 # ---------------------------------------------------------------------------
 
+
 def main() -> None:
+    """Evaluate MEPs and write output-based metrics to JSONL."""
     parser = argparse.ArgumentParser(description="Evaluate MEPs — output-based metrics")
-    parser.add_argument("--mep_dir", required=True, help="Directory containing MEP JSON files")
+    parser.add_argument(
+        "--mep_dir", required=True, help="Directory containing MEP JSON files"
+    )
     parser.add_argument("--out", default="metrics.jsonl", help="Output JSONL file")
-    parser.add_argument("--no_judge", action="store_true", help="Skip LLM judge (faster)")
-    parser.add_argument("--judge_backend", default="openai", choices=["openai", "gemini"])
+    parser.add_argument(
+        "--no_judge", action="store_true", help="Skip LLM judge (faster)"
+    )
+    parser.add_argument(
+        "--judge_backend", default="openai", choices=["openai", "gemini"]
+    )
     parser.add_argument("--judge_model", default="gpt-4o")
     args = parser.parse_args()
 
     use_judge = not args.no_judge
-    
-    os.makedirs(os.path.dirname(args.out), exist_ok=True)
+
+    out_dir = os.path.dirname(args.out)
+    if out_dir:
+        os.makedirs(out_dir, exist_ok=True)
     with open(args.out, "w") as f_out:
         count = 0
         for mep in iter_meps(args.mep_dir):

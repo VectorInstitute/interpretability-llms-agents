@@ -8,12 +8,13 @@ import os
 from pathlib import Path
 from typing import Any, List, Optional, Tuple
 
-from crewai import Agent, Crew, LLM, Task
+from crewai import LLM, Agent, Crew, Task
 
 from ..datasets.perceived_sample import PerceivedSample
 from ..opik_integration.tracing import close_span, open_llm_span
 from ..tools.vision_qa_tool import VisionQATool
 from ..utils.json_strict import parse_strict
+
 
 VISION_PROMPT_PATH = Path(__file__).parent / "prompts" / "vision.txt"
 
@@ -21,12 +22,14 @@ VISION_REQUIRED_KEYS = ["answer", "explanation"]
 
 
 def _load_template() -> str:
+    """Load the vision agent prompt template from file."""
     return VISION_PROMPT_PATH.read_text()
 
 
 def build_vision_task_description(
     sample: PerceivedSample, plan: dict, ocr_result: Optional[dict] = None
 ) -> str:
+    """Build the task description prompt for the vision agent."""
     template = _load_template()
 
     choices_block = ""
@@ -45,17 +48,23 @@ def build_vision_task_description(
 
     ocr_block = ""
     if ocr_result:
-        lines = ["Pre-extracted text from chart (use as ground truth for visible text):"]
+        lines = [
+            "Pre-extracted text from chart (use as ground truth for visible text):"
+        ]
         if ocr_result.get("chart_type"):
             lines.append(f"  Chart type : {ocr_result['chart_type']}")
         if ocr_result.get("title"):
             lines.append(f"  Title      : {ocr_result['title']}")
         x = ocr_result.get("x_axis", {})
         if x.get("label") or x.get("ticks"):
-            lines.append(f"  X-axis     : label={x.get('label', '')!r}  ticks={x.get('ticks', [])}")
+            lines.append(
+                f"  X-axis     : label={x.get('label', '')!r}  ticks={x.get('ticks', [])}"
+            )
         y = ocr_result.get("y_axis", {})
         if y.get("label") or y.get("ticks"):
-            lines.append(f"  Y-axis     : label={y.get('label', '')!r}  ticks={y.get('ticks', [])}")
+            lines.append(
+                f"  Y-axis     : label={y.get('label', '')!r}  ticks={y.get('ticks', [])}"
+            )
         if ocr_result.get("legend"):
             lines.append(f"  Legend     : {ocr_result['legend']}")
         if ocr_result.get("data_labels"):
@@ -75,6 +84,11 @@ def build_vision_task_description(
 
 
 def _build_llm(backend: str, model: str, api_key: Optional[str]) -> LLM:
+    """Build an LLM instance for the given backend and model.
+
+    Abstracts away differences in API key environment variables
+    for different backends.
+    """
     if backend == "openai":
         return LLM(
             model=model,
@@ -92,7 +106,8 @@ def _build_llm(backend: str, model: str, api_key: Optional[str]) -> LLM:
 
 class VisionAgent:
     """
-    Two-layer vision agent:
+    Two-layer vision agent.
+
       - Orchestrator LLM: decides to call vision_qa_tool (text-only reasoning)
       - vision_qa_tool:   calls the actual VLM backend (OpenAI/Gemini vision)
     """
@@ -106,6 +121,7 @@ class VisionAgent:
         agent_api_key: Optional[str] = None,
         vision_api_key: Optional[str] = None,
     ):
+        """Initialize the VisionAgent with specified backends, models, and API keys."""
         self.agent_backend = agent_backend
         self.agent_model = agent_model
         self.vision_backend = vision_backend
@@ -114,6 +130,7 @@ class VisionAgent:
         self.vision_api_key = vision_api_key
 
     def _build_tool(self, opik_trace: Any = None) -> VisionQATool:
+        """Build the vision_qa_tool instance with appropriate backend and model."""
         key = self.vision_api_key or (
             os.environ.get("OPENAI_API_KEY", "")
             if self.vision_backend == "openai"
@@ -141,7 +158,8 @@ class VisionAgent:
                         provided it is injected into the task prompt as grounding
                         context. Pass None to skip OCR grounding.
 
-        Returns:
+        Returns
+        -------
             task_description – rendered task prompt
             parsed           – {answer, explanation} dict
             parse_error      – True if JSON parsing needed repair or failed
@@ -150,7 +168,9 @@ class VisionAgent:
         """
         tool = self._build_tool(opik_trace=opik_trace)
         llm = _build_llm(self.agent_backend, self.agent_model, self.agent_api_key)
-        task_description = build_vision_task_description(sample, plan, ocr_result=ocr_result)
+        task_description = build_vision_task_description(
+            sample, plan, ocr_result=ocr_result
+        )
 
         vision_span = open_llm_span(
             opik_trace,
@@ -175,7 +195,7 @@ class VisionAgent:
             tools=[tool],
             verbose=False,
             allow_delegation=False,
-            max_iter=3,   # limit iterations to prevent runaway tool calls
+            max_iter=3,  # limit iterations to prevent runaway tool calls
         )
 
         task = Task(

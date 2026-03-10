@@ -441,14 +441,14 @@ Two notebooks are provided, covering opposite ends of the workflow:
 
 **Execution notebook** (start here):
 ```bash
-# ./.venv/bin/jupyter notebook 
+# ./.venv/bin/jupyter notebook
 run_pipeline.ipynb
 ```
 Edit the configuration cell at the top (N_SAMPLES, CONFIG, USE_OCR, USE_VERIFIER), then *Run All*. Covers: dataset loading → agent instantiation → pipeline run → OCR ablation → Pass 1/2/4 evaluation → summary CSV.
 
 **Analysis notebook** (after generating results):
 ```bash
-# ./.venv/bin/jupyter notebook 
+# ./.venv/bin/jupyter notebook
 analysis.ipynb
 ```
 Pre-built cells walk through: loading MEPs, accuracy by question type, verifier before/after comparison, failure taxonomy chart, judge score distributions, and a single-sample deep-dive with inline chart image.

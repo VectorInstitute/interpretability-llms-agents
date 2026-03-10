@@ -1,15 +1,15 @@
-"""Top-K answer evaluation pass.
+r"""Top-K answer evaluation pass.
 
 For each MEP, re-queries the VLM asking for the top-3 most likely candidate
 answers. Computes hit@1, hit@2, hit@3 without modifying any existing MEPs or
 metrics.
 
 Usage:
-    python -m agentic_chartqapro_eval.eval.eval_topk \\
-        --mep_dir meps/openai_openai/chartqapro/test \\
-        --out topk_metrics.jsonl \\
-        --backend openai \\
-        --model gpt-4o \\
+    python -m agentic_chartqapro_eval.eval.eval_topk \
+        --mep_dir meps/openai_openai/chartqapro/test \
+        --out topk_metrics.jsonl \
+        --backend openai \
+        --model gpt-4o \
         --k 3
 """
 
@@ -17,7 +17,6 @@ import argparse
 import base64
 import json
 import os
-import re
 from pathlib import Path
 from typing import List, Optional
 
@@ -25,7 +24,8 @@ from dotenv import load_dotenv
 
 from ..mep.writer import iter_meps
 from ..utils.json_strict import parse_strict
-from .eval_outputs import _normalize, _to_number, score_answer_accuracy
+from .eval_outputs import score_answer_accuracy
+
 
 load_dotenv()
 
@@ -52,9 +52,13 @@ Rules:
 
 def _encode_image(image_path: str) -> tuple:
     ext = Path(image_path).suffix.lower().lstrip(".")
-    mime = {"jpg": "jpeg", "jpeg": "jpeg", "png": "png", "gif": "gif", "webp": "webp"}.get(
-        ext, "jpeg"
-    )
+    mime = {
+        "jpg": "jpeg",
+        "jpeg": "jpeg",
+        "png": "png",
+        "gif": "gif",
+        "webp": "webp",
+    }.get(ext, "jpeg")
     with open(image_path, "rb") as f:
         b64 = base64.b64encode(f.read()).decode("utf-8")
     return b64, mime
@@ -77,7 +81,10 @@ def _call_openai_topk(
                 "role": "user",
                 "content": [
                     {"type": "text", "text": prompt},
-                    {"type": "image_url", "image_url": {"url": f"data:image/{mime};base64,{b64}"}},
+                    {
+                        "type": "image_url",
+                        "image_url": {"url": f"data:image/{mime};base64,{b64}"},
+                    },
                 ],
             }
         ],
@@ -126,7 +133,9 @@ def get_topk_candidates(
     plan_steps = plan.get("steps", [])
 
     choices_block = f"Choices: {', '.join(choices)}" if choices else ""
-    steps_text = "\n".join(f"  {i+1}. {s}" for i, s in enumerate(plan_steps)) or "  (none)"
+    steps_text = (
+        "\n".join(f"  {i + 1}. {s}" for i, s in enumerate(plan_steps)) or "  (none)"
+    )
 
     prompt = _TOPK_PROMPT.format(
         k=k,
@@ -152,7 +161,9 @@ def get_topk_candidates(
         return []
 
 
-def _hit_at_k(expected: str, candidates: List[str], question_type: str, k: int) -> float:
+def _hit_at_k(
+    expected: str, candidates: List[str], question_type: str, k: int
+) -> float:
     """1.0 if expected matches any of the first k candidates."""
     for c in candidates[:k]:
         if score_answer_accuracy(expected, c, question_type) > 0:
@@ -167,6 +178,7 @@ def evaluate_topk(
     model: str = "gpt-4o",
     api_key: Optional[str] = None,
 ) -> dict:
+    """Evaluate top-K answer candidates for a single MEP."""
     sample = mep.get("sample", {})
     config = mep.get("config", {})
 
@@ -176,7 +188,9 @@ def evaluate_topk(
     # Top-1 answer from the original MEP (already computed, no extra call)
     original_answer = mep.get("vision", {}).get("parsed", {}).get("answer", "")
 
-    candidates = get_topk_candidates(mep, k=k, backend=backend, model=model, api_key=api_key)
+    candidates = get_topk_candidates(
+        mep, k=k, backend=backend, model=model, api_key=api_key
+    )
 
     result: dict = {
         "sample_id": sample.get("sample_id", ""),
@@ -185,7 +199,9 @@ def evaluate_topk(
         "expected": expected,
         "original_answer": original_answer,
         "topk_candidates": candidates,
-        "original_accuracy": score_answer_accuracy(expected, original_answer, question_type),
+        "original_accuracy": score_answer_accuracy(
+            expected, original_answer, question_type
+        ),
     }
 
     for ki in range(1, k + 1):
@@ -195,6 +211,7 @@ def evaluate_topk(
 
 
 def main() -> None:
+    """Run top-K evaluation on MEPs and write results to JSONL."""
     parser = argparse.ArgumentParser(description="Top-K answer candidate evaluation")
     parser.add_argument("--mep_dir", required=True)
     parser.add_argument("--out", default="topk_metrics.jsonl")
@@ -217,7 +234,11 @@ def main() -> None:
                 break
             try:
                 result = evaluate_topk(
-                    mep, k=args.k, backend=args.backend, model=args.model, api_key=api_key
+                    mep,
+                    k=args.k,
+                    backend=args.backend,
+                    model=args.model,
+                    api_key=api_key,
                 )
                 f_out.write(json.dumps(result) + "\n")
                 sid = result["sample_id"]
@@ -225,14 +246,16 @@ def main() -> None:
                 cands = result["topk_candidates"]
                 h1 = result.get("hit_at_1", 0)
                 h3 = result.get(f"hit_at_{args.k}", 0)
-                print(f"  {sid}  exp={exp!r}  candidates={cands}  hit@1={h1}  hit@{args.k}={h3}")
+                print(
+                    f"  {sid}  exp={exp!r}  candidates={cands}  hit@1={h1}  hit@{args.k}={h3}"
+                )
                 count += 1
             except Exception as exc:
                 print(f"  Error: {exc}")
 
     # Print summary
     with open(args.out) as f:
-        records = [json.loads(l) for l in f if l.strip()]
+        records = [json.loads(line) for line in f if line.strip()]
 
     if records:
         print(f"\n--- Top-K Summary (n={len(records)}) ---")

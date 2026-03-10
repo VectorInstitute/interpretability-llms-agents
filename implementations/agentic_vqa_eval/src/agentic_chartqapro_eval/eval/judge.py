@@ -8,6 +8,7 @@ from typing import Optional
 
 from ..utils.json_strict import parse_strict
 
+
 _JUDGE_PROMPT = """\
 You are an expert chart question-answering evaluator.
 
@@ -49,7 +50,7 @@ _JUDGE_KEYS = [
 
 
 def _default_scores() -> dict:
-    return {k: 0.0 for k in _JUDGE_KEYS}
+    return dict.fromkeys(_JUDGE_KEYS, 0.0)
 
 
 def _call_llm(prompt: str, backend: str, model: str, api_key: Optional[str]) -> str:
@@ -93,7 +94,9 @@ def judge_mep(
     agent_explanation = parsed_vision.get("explanation", "")
     plan_steps = plan.get("steps", [])
 
-    steps_text = "\n".join(f"  {i+1}. {s}" for i, s in enumerate(plan_steps)) or "  (none)"
+    steps_text = (
+        "\n".join(f"  {i + 1}. {s}" for i, s in enumerate(plan_steps)) or "  (none)"
+    )
 
     prompt = _JUDGE_PROMPT.format(
         question=question or "unknown",

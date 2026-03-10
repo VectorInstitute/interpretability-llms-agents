@@ -4,9 +4,10 @@ All helpers accept ``None`` as the client/trace and become no-ops, so the
 rest of the codebase can call them unconditionally.
 """
 
+import contextlib
 from contextlib import contextmanager
 from datetime import datetime, timezone
-from typing import Any, Optional
+from typing import Optional
 
 
 def _now() -> datetime:
@@ -33,7 +34,11 @@ def sample_trace(
         name=f"chartqapro/{sample_id}",
         input={"question": question, "expected_output": expected_output},
         tags=[config_name, question_type, "chartqapro"],
-        metadata={"run_id": run_id, "config": config_name, "question_type": question_type},
+        metadata={
+            "run_id": run_id,
+            "config": config_name,
+            "question_type": question_type,
+        },
         project_name=project_name,
     )
     try:
@@ -79,6 +84,7 @@ def close_span(
         kwargs["usage"] = usage
     if error:
         from opik.types import ErrorInfoDict
+
         kwargs["error_info"] = ErrorInfoDict(message=error)
     span.end(**kwargs)
 
@@ -89,7 +95,5 @@ def log_trace_scores(trace, scores: dict) -> None:
         return
     for name, value in scores.items():
         if isinstance(value, (int, float)):
-            try:
+            with contextlib.suppress(Exception):
                 trace.log_feedback_score(name=name, value=float(value))
-            except Exception:
-                pass

@@ -14,6 +14,7 @@ from typing import Optional
 
 from .client import get_client
 
+
 # Prompt names as stored in the Opik Prompt Library
 PLANNER_PROMPT_NAME = "chartqapro_planner"
 VISION_PROMPT_NAME = "chartqapro_vision"
@@ -63,7 +64,10 @@ def push_prompts(
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Push prompt files to Opik Prompt Library")
+    """Parse CLI arguments and push prompt files to the Opik Prompt Library."""
+    parser = argparse.ArgumentParser(
+        description="Push prompt files to Opik Prompt Library"
+    )
     parser.add_argument("--planner", default=None, help="Path to planner.txt")
     parser.add_argument("--vision", default=None, help="Path to vision.txt")
     args = parser.parse_args()

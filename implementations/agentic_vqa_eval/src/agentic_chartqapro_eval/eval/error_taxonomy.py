@@ -1,4 +1,4 @@
-"""Pass 4: failure taxonomy — classify WHY each wrong answer failed.
+r"""Pass 4: failure taxonomy — classify WHY each wrong answer failed.
 
 Unlike the LLM judge (which uses text only), this pass gives a VLM both the
 chart image AND the agent's wrong answer so it can make a grounded, visual
@@ -13,6 +13,7 @@ Usage:
 
 import argparse
 import base64
+import contextlib
 import json
 import os
 from pathlib import Path
@@ -24,6 +25,7 @@ from ..mep.writer import iter_meps
 from ..opik_integration.client import get_client
 from ..utils.json_strict import parse_strict
 
+
 load_dotenv()
 
 # ---------------------------------------------------------------------------
@@ -31,14 +33,14 @@ load_dotenv()
 # ---------------------------------------------------------------------------
 
 TAXONOMY_CATEGORIES = [
-    "axis_misread",           # read the wrong axis value, scale, or unit
-    "legend_confusion",       # confused series, colours, or legend entries
-    "arithmetic_mistake",     # correct data extracted but calculation is wrong
-    "hallucinated_element",   # referenced data / labels NOT visible in the chart
-    "unanswerable_failure",   # should say UNANSWERABLE but didn't, or vice versa
+    "axis_misread",  # read the wrong axis value, scale, or unit
+    "legend_confusion",  # confused series, colours, or legend entries
+    "arithmetic_mistake",  # correct data extracted but calculation is wrong
+    "hallucinated_element",  # referenced data / labels NOT visible in the chart
+    "unanswerable_failure",  # should say UNANSWERABLE but didn't, or vice versa
     "question_misunderstanding",  # answered a different / adjacent question
-    "extraction_error",       # could not locate the relevant data in the chart
-    "other",                  # none of the above
+    "extraction_error",  # could not locate the relevant data in the chart
+    "other",  # none of the above
 ]
 
 _TAXONOMY_PROMPT = """\
@@ -74,16 +76,25 @@ _TAXONOMY_KEYS = ["failure_type", "failure_reason"]
 # VLM helpers (multimodal — image + text)
 # ---------------------------------------------------------------------------
 
+
 def _encode_image(image_path: str) -> tuple:
     """Return (base64_string, mime_type) for an image file."""
     ext = Path(image_path).suffix.lower().lstrip(".")
-    mime = {"jpg": "jpeg", "jpeg": "jpeg", "png": "png", "gif": "gif", "webp": "webp"}.get(ext, "jpeg")
+    mime = {
+        "jpg": "jpeg",
+        "jpeg": "jpeg",
+        "png": "png",
+        "gif": "gif",
+        "webp": "webp",
+    }.get(ext, "jpeg")
     with open(image_path, "rb") as f:
         b64 = base64.b64encode(f.read()).decode("utf-8")
     return b64, mime
 
 
-def _call_vlm_openai(prompt: str, image_path: str, model: str, api_key: Optional[str]) -> str:
+def _call_vlm_openai(
+    prompt: str, image_path: str, model: str, api_key: Optional[str]
+) -> str:
     from openai import OpenAI
 
     client = OpenAI(api_key=api_key or os.environ.get("OPENAI_API_KEY", ""))
@@ -95,7 +106,10 @@ def _call_vlm_openai(prompt: str, image_path: str, model: str, api_key: Optional
                 "role": "user",
                 "content": [
                     {"type": "text", "text": prompt},
-                    {"type": "image_url", "image_url": {"url": f"data:image/{mime};base64,{b64}"}},
+                    {
+                        "type": "image_url",
+                        "image_url": {"url": f"data:image/{mime};base64,{b64}"},
+                    },
                 ],
             }
         ],
@@ -105,7 +119,9 @@ def _call_vlm_openai(prompt: str, image_path: str, model: str, api_key: Optional
     return response.choices[0].message.content or ""
 
 
-def _call_vlm_gemini(prompt: str, image_path: str, model: str, api_key: Optional[str]) -> str:
+def _call_vlm_gemini(
+    prompt: str, image_path: str, model: str, api_key: Optional[str]
+) -> str:
     import google.generativeai as genai
     from PIL import Image
 
@@ -114,7 +130,9 @@ def _call_vlm_gemini(prompt: str, image_path: str, model: str, api_key: Optional
     image = Image.open(image_path)
     response = gemini_model.generate_content(
         [image, prompt],
-        generation_config=genai.types.GenerationConfig(temperature=0, max_output_tokens=256),
+        generation_config=genai.types.GenerationConfig(
+            temperature=0, max_output_tokens=256
+        ),
     )
     return response.text or ""
 
@@ -122,6 +140,7 @@ def _call_vlm_gemini(prompt: str, image_path: str, model: str, api_key: Optional
 # ---------------------------------------------------------------------------
 # Per-MEP classification
 # ---------------------------------------------------------------------------
+
 
 def classify_failure(
     mep: dict,
@@ -132,10 +151,11 @@ def classify_failure(
 ) -> dict:
     """Classify WHY the agent failed on this sample.
 
-    Returns:
+    Returns
+    -------
         dict with keys ``failure_type`` and ``failure_reason``.
-        If ``answer_accuracy == 1.0``, returns immediately with ``failure_type="correct"``
-        without making a VLM call.
+        If ``answer_accuracy == 1.0``, returns immediately with
+        ``failure_type="correct"`` without making a VLM call.
     """
     if answer_accuracy >= 1.0:
         return {"failure_type": "correct", "failure_reason": ""}
@@ -150,7 +170,9 @@ def classify_failure(
     explanation = vision.get("explanation", "")
     image_path = sample.get("image_ref", {}).get("path", "") or ""
     plan_steps = plan.get("steps", [])
-    steps_text = "\n".join(f"  {i+1}. {s}" for i, s in enumerate(plan_steps)) or "  (none)"
+    steps_text = (
+        "\n".join(f"  {i + 1}. {s}" for i, s in enumerate(plan_steps)) or "  (none)"
+    )
 
     prompt = _TAXONOMY_PROMPT.format(
         question=question or "(unknown)",
@@ -171,29 +193,42 @@ def classify_failure(
                 raw = _call_vlm_gemini(prompt, image_path, model, api_key)
             else:
                 raise ValueError(f"Unknown backend: {backend!r}")
+        # Image missing — use text-only fallback via the same models
+        elif backend == "openai":
+            from openai import OpenAI
+
+            client = OpenAI(api_key=api_key or os.environ.get("OPENAI_API_KEY", ""))
+            resp = client.chat.completions.create(
+                model=model,
+                messages=[
+                    {
+                        "role": "user",
+                        "content": prompt + "\n\n(Note: chart image unavailable)",
+                    }
+                ],
+                temperature=0,
+                max_completion_tokens=256,
+            )
+            raw = resp.choices[0].message.content or ""
+        elif backend == "gemini":
+            import google.generativeai as genai
+
+            genai.configure(api_key=api_key or os.environ.get("GEMINI_API_KEY", ""))
+            m = genai.GenerativeModel(model)
+            raw = (
+                m.generate_content(prompt + "\n\n(Note: chart image unavailable)").text
+                or ""
+            )
         else:
-            # Image missing — use text-only fallback via the same models
-            if backend == "openai":
-                from openai import OpenAI
-                client = OpenAI(api_key=api_key or os.environ.get("OPENAI_API_KEY", ""))
-                resp = client.chat.completions.create(
-                    model=model,
-                    messages=[{"role": "user", "content": prompt + "\n\n(Note: chart image unavailable)"}],
-                    temperature=0,
-                    max_completion_tokens=256,
-                )
-                raw = resp.choices[0].message.content or ""
-            elif backend == "gemini":
-                import google.generativeai as genai
-                genai.configure(api_key=api_key or os.environ.get("GEMINI_API_KEY", ""))
-                m = genai.GenerativeModel(model)
-                raw = m.generate_content(prompt + "\n\n(Note: chart image unavailable)").text or ""
-            else:
-                raise ValueError(f"Unknown backend: {backend!r}")
+            raise ValueError(f"Unknown backend: {backend!r}")
 
         result, ok = parse_strict(raw, required_keys=_TAXONOMY_KEYS)
         if not result:
-            return {"failure_type": "other", "failure_reason": raw[:200], "parse_error": True}
+            return {
+                "failure_type": "other",
+                "failure_reason": raw[:200],
+                "parse_error": True,
+            }
 
         # Normalise category to valid set
         ft = result.get("failure_type", "other").strip().lower()
@@ -210,18 +245,25 @@ def classify_failure(
 # CLI
 # ---------------------------------------------------------------------------
 
-def main() -> None:
+
+def main() -> None:  # noqa: PLR0915
+    """Classify failures in MEP files and write taxonomy results to JSONL."""
     parser = argparse.ArgumentParser(description="Pass 4: failure taxonomy via VLM")
-    parser.add_argument("--mep_dir", required=True, help="Directory containing MEP JSON files")
     parser.add_argument(
-        "--metrics_file", default=None,
+        "--mep_dir", required=True, help="Directory containing MEP JSON files"
+    )
+    parser.add_argument(
+        "--metrics_file",
+        default=None,
         help="Optional metrics.jsonl from eval_outputs — used to look up answer_accuracy",
     )
     parser.add_argument("--out", default="taxonomy.jsonl", help="Output JSONL file")
     parser.add_argument("--backend", default="openai", choices=["openai", "gemini"])
     parser.add_argument("--model", default="gpt-4o")
     parser.add_argument(
-        "--all", dest="classify_all", action="store_true",
+        "--all",
+        dest="classify_all",
+        action="store_true",
         help="Classify correct samples too (by default they are skipped)",
     )
     args = parser.parse_args()
@@ -230,11 +272,13 @@ def main() -> None:
     accuracy_by_id: dict = {}
     if args.metrics_file and Path(args.metrics_file).exists():
         with open(args.metrics_file) as f:
-            for line in f:
-                line = line.strip()
+            for raw_line in f:
+                line = raw_line.strip()
                 if line:
                     row = json.loads(line)
-                    accuracy_by_id[row.get("sample_id", "")] = row.get("answer_accuracy", 0.0)
+                    accuracy_by_id[row.get("sample_id", "")] = row.get(
+                        "answer_accuracy", 0.0
+                    )
 
     opik_client = get_client()
 
@@ -253,7 +297,11 @@ def main() -> None:
             answer_accuracy = accuracy_by_id.get(sample_id, -1.0)
             if answer_accuracy < 0:
                 # fallback: 1.0 if strings match case-insensitively
-                answer_accuracy = 1.0 if expected.strip().lower() == predicted.strip().lower() else 0.0
+                answer_accuracy = (
+                    1.0
+                    if expected.strip().lower() == predicted.strip().lower()
+                    else 0.0
+                )
 
             if answer_accuracy >= 1.0 and not args.classify_all:
                 skipped += 1
@@ -272,7 +320,9 @@ def main() -> None:
                 continue
 
             try:
-                result = classify_failure(mep, answer_accuracy, backend=args.backend, model=args.model)
+                result = classify_failure(
+                    mep, answer_accuracy, backend=args.backend, model=args.model
+                )
                 row = {
                     "sample_id": sample_id,
                     "config_name": config_name,
@@ -289,12 +339,16 @@ def main() -> None:
                 opik_trace_id = mep.get("opik_trace_id")
                 if opik_client and opik_trace_id:
                     failure_type = result.get("failure_type", "other")
-                    try:
-                        opik_client.log_traces_feedback_scores([
-                            {"id": opik_trace_id, "name": f"failure_{failure_type}", "value": 1.0}
-                        ])
-                    except Exception:
-                        pass
+                    with contextlib.suppress(Exception):
+                        opik_client.log_traces_feedback_scores(
+                            [
+                                {
+                                    "id": opik_trace_id,
+                                    "name": f"failure_{failure_type}",
+                                    "value": 1.0,
+                                }
+                            ]
+                        )
 
                 if count % 10 == 0:
                     print(f"  classified {count} samples …")
@@ -302,7 +356,9 @@ def main() -> None:
             except Exception as exc:
                 print(f"  Error on {sample_id}: {exc}")
 
-    print(f"\nDone. {count} rows written to {args.out}  ({skipped} correct samples recorded as-is)")
+    print(
+        f"\nDone. {count} rows written to {args.out}  ({skipped} correct samples recorded as-is)"
+    )
 
     # Print a quick breakdown
     breakdown: dict = {}

@@ -8,11 +8,12 @@ import os
 from pathlib import Path
 from typing import Any, Optional, Tuple
 
-from crewai import Agent, Crew, LLM, Task
+from crewai import LLM, Agent, Crew, Task
 
 from ..datasets.perceived_sample import PerceivedSample
 from ..opik_integration.tracing import close_span, open_llm_span
 from ..utils.json_strict import parse_strict
+
 
 PLANNER_PROMPT_PATH = Path(__file__).parent / "prompts" / "planner.txt"
 
@@ -26,10 +27,12 @@ PLAN_REQUIRED_KEYS = [
 
 
 def _load_template() -> str:
+    """Load the planner prompt template from a file."""
     return PLANNER_PROMPT_PATH.read_text()
 
 
 def build_planner_prompt(sample: PerceivedSample) -> str:
+    """Render the planner prompt for a given sample."""
     template = _load_template()
 
     choices_block = ""
@@ -52,6 +55,10 @@ def build_planner_prompt(sample: PerceivedSample) -> str:
 
 
 def _build_llm(backend: str, model: str, api_key: Optional[str]) -> LLM:
+    """Construct the LLM instance based on the specified backend and model.
+
+    Reads API keys from environment variables if not provided directly.
+    """
     if backend == "openai":
         return LLM(
             model=model,
@@ -76,16 +83,20 @@ class PlannerAgent:
         model: str = "gpt-4o",
         api_key: Optional[str] = None,
     ):
+        """Parameters"""
         self.backend = backend
         self.model = model
         self.api_key = api_key
         self._llm = _build_llm(backend, model, api_key)
 
-    def run(self, sample: PerceivedSample, opik_trace: Any = None) -> Tuple[str, dict, bool, str]:
+    def run(
+        self, sample: PerceivedSample, opik_trace: Any = None
+    ) -> Tuple[str, dict, bool, str]:
         """
         Run the planner for one sample.
 
-        Returns:
+        Returns
+        -------
             prompt       – the rendered prompt string
             parsed       – parsed plan dict (may be partial on error)
             parse_error  – True if JSON parsing needed repair or failed

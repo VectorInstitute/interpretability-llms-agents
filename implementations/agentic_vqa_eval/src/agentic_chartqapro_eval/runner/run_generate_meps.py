@@ -1,4 +1,4 @@
-"""Runner: generate Model Evaluation Packets (MEPs) for ChartQAPro.
+r"""Runner: generate Model Evaluation Packets (MEPs) for ChartQAPro.
 
 Usage:
     python -m agentic_chartqapro_eval.runner.run_generate_meps \\
@@ -11,6 +11,7 @@ Usage:
 """
 
 import argparse
+import contextlib
 import traceback
 import uuid
 from concurrent.futures import ThreadPoolExecutor, as_completed
@@ -25,8 +26,8 @@ from ..agents.vision_agent import VisionAgent
 from ..datasets.chartqapro_loader import load_chartqapro
 from ..datasets.perceived_sample import PerceivedSample
 from ..mep.schema import (
-    ImageRef,
     MEP,
+    ImageRef,
     MEPConfig,
     MEPOcr,
     MEPPlan,
@@ -36,14 +37,18 @@ from ..mep.schema import (
     MEPVision,
 )
 from ..mep.writer import write_mep
-from ..tools.ocr_reader_tool import OcrReaderTool
 from ..opik_integration.client import get_client
 from ..opik_integration.dataset import register_dataset
 from ..opik_integration.prompts import push_prompts
-from ..opik_integration.tracing import close_span, log_trace_scores, open_llm_span, sample_trace
+from ..opik_integration.tracing import (
+    log_trace_scores,
+    sample_trace,
+)
+from ..tools.ocr_reader_tool import OcrReaderTool
 from ..utils.hashing import sha256_file
 from ..utils.json_strict import parse_strict
 from ..utils.timing import iso_now, timed
+
 
 load_dotenv()
 
@@ -101,7 +106,8 @@ _FALLBACK_PLAN = {
 # Per-sample processing
 # ---------------------------------------------------------------------------
 
-def process_sample(
+
+def process_sample(  # noqa: PLR0915
     sample: PerceivedSample,
     planner: PlannerAgent,
     vision_agent: VisionAgent,
@@ -112,8 +118,10 @@ def process_sample(
     verifier_agent: Optional[VerifierAgent] = None,
     ocr_tool: Optional[OcrReaderTool] = None,
 ) -> str:
-    """Plan → [OCR] → Vision → [Verifier] → MEP.  Returns the path of the written MEP file."""
+    """Run Plan → [OCR] → Vision → [Verifier] → MEP pipeline.
 
+    Returns the path of the written MEP file.
+    """
     config_name = f"{config['planner_backend']}_{config['vision_backend']}"
     run_start = iso_now()
     errors: list = []
@@ -163,7 +171,9 @@ def process_sample(
                     ocr_raw = ocr_tool._run(sample.image_path)
                 ocr_ms = ot.elapsed_ms
                 ocr_traces = ocr_tool.pop_traces()
-                ocr_parsed, ocr_ok = parse_strict(ocr_raw, required_keys=["chart_type", "title"])
+                ocr_parsed, ocr_ok = parse_strict(
+                    ocr_raw, required_keys=["chart_type", "title"]
+                )
                 ocr_parse_error = not ocr_ok
                 if not ocr_parsed:
                     ocr_parsed = {}
@@ -182,9 +192,17 @@ def process_sample(
 
         try:
             with timed() as vt:
-                vision_prompt, vision_parsed, vision_parse_error, vision_raw, vision_traces = (
-                    vision_agent.run(sample, plan_parsed, opik_trace=opik_trace,
-                                     ocr_result=ocr_parsed if ocr_parsed else None)
+                (
+                    vision_prompt,
+                    vision_parsed,
+                    vision_parse_error,
+                    vision_raw,
+                    vision_traces,
+                ) = vision_agent.run(
+                    sample,
+                    plan_parsed,
+                    opik_trace=opik_trace,
+                    ocr_result=ocr_parsed if ocr_parsed else None,
                 )
             vision_ms = vt.elapsed_ms
         except Exception as exc:
@@ -204,8 +222,13 @@ def process_sample(
         if verifier_agent is not None:
             try:
                 with timed() as vrt:
-                    verifier_prompt, verifier_parsed, verifier_parse_error, verifier_raw = (
-                        verifier_agent.run(sample, plan_parsed, vision_parsed, opik_trace=opik_trace)
+                    (
+                        verifier_prompt,
+                        verifier_parsed,
+                        verifier_parse_error,
+                        verifier_raw,
+                    ) = verifier_agent.run(
+                        sample, plan_parsed, vision_parsed, opik_trace=opik_trace
                     )
                 verifier_ms = vrt.elapsed_ms
                 verifier_verdict = verifier_parsed.get("verdict", "confirmed")
@@ -224,10 +247,8 @@ def process_sample(
         # ---- Image ref ----
         image_sha = ""
         if sample.image_path and Path(sample.image_path).exists():
-            try:
+            with contextlib.suppress(Exception):
                 image_sha = sha256_file(sample.image_path)
-            except Exception:
-                pass
 
         # ---- Assemble MEP ----
         mep = MEP(
@@ -260,7 +281,9 @@ def process_sample(
                 parsed=ocr_parsed,
                 parse_error=ocr_parse_error,
                 tool_trace=ocr_traces,
-            ) if ocr_tool is not None else None,
+            )
+            if ocr_tool is not None
+            else None,
             vision=MEPVision(
                 prompt=vision_prompt,
                 raw_text=vision_raw,
@@ -274,7 +297,9 @@ def process_sample(
                 parsed=verifier_parsed,
                 parse_error=verifier_parse_error,
                 verdict=verifier_verdict,
-            ) if verifier_agent is not None else None,
+            )
+            if verifier_agent is not None
+            else None,
             timestamps=MEPTimestamps(
                 start=run_start,
                 end=run_end,
@@ -288,11 +313,14 @@ def process_sample(
         )
 
         # ---- Immediately log available scores to Opik ----
-        log_trace_scores(opik_trace, {
-            "planner_parse_ok": float(not plan_parse_error),
-            "vision_parse_ok": float(not vision_parse_error),
-            "has_errors": float(bool(errors)),
-        })
+        log_trace_scores(
+            opik_trace,
+            {
+                "planner_parse_ok": float(not plan_parse_error),
+                "vision_parse_ok": float(not vision_parse_error),
+                "has_errors": float(bool(errors)),
+            },
+        )
         if opik_trace:
             opik_trace.end(output=vision_parsed if vision_parsed else None)
 
@@ -303,27 +331,61 @@ def process_sample(
 # CLI
 # ---------------------------------------------------------------------------
 
-def main() -> None:
+
+def main() -> None:  # noqa: PLR0912, PLR0915
+    """Parse CLI arguments and run the MEP generation pipeline."""
     parser = argparse.ArgumentParser(description="Generate MEPs for ChartQAPro")
-    parser.add_argument("--dataset", default="chartqapro", help="Dataset name (currently only chartqapro)")
+    parser.add_argument(
+        "--dataset",
+        default="chartqapro",
+        help="Dataset name (currently only chartqapro)",
+    )
     parser.add_argument("--split", default="test", help="Dataset split")
-    parser.add_argument("--n", type=int, default=10, help="Number of samples to process")
+    parser.add_argument(
+        "--n", type=int, default=10, help="Number of samples to process"
+    )
     parser.add_argument(
         "--config",
         default="openai_openai",
         choices=list(BACKEND_CONFIGS.keys()),
         help="Backend config preset",
     )
-    parser.add_argument("--workers", type=int, default=1, help="Parallel workers (1 = sequential)")
+    parser.add_argument(
+        "--workers", type=int, default=1, help="Parallel workers (1 = sequential)"
+    )
     parser.add_argument("--out", default="meps/", help="Output directory for MEPs")
-    parser.add_argument("--image_dir", default="data/chartqapro_images", help="Directory to save/load chart images")
-    parser.add_argument("--cache_dir", default=None, help="HuggingFace datasets cache dir")
-    parser.add_argument("--planner_model", default=None, help="Override planner model name (e.g. gpt-4o, o3)")
-    parser.add_argument("--vision_model", default=None, help="Override vision model name (e.g. gpt-4o, gemini-1.5-pro)")
-    parser.add_argument("--verifier_model", default=None, help="Override verifier model (defaults to vision_model)")
-    parser.add_argument("--no_verifier", action="store_true", help="Skip Pass 2.5 verifier agent")
+    parser.add_argument(
+        "--image_dir",
+        default="data/chartqapro_images",
+        help="Directory to save/load chart images",
+    )
+    parser.add_argument(
+        "--cache_dir", default=None, help="HuggingFace datasets cache dir"
+    )
+    parser.add_argument(
+        "--planner_model",
+        default=None,
+        help="Override planner model name (e.g. gpt-4o, o3)",
+    )
+    parser.add_argument(
+        "--vision_model",
+        default=None,
+        help="Override vision model name (e.g. gpt-4o, gemini-1.5-pro)",
+    )
+    parser.add_argument(
+        "--verifier_model",
+        default=None,
+        help="Override verifier model (defaults to vision_model)",
+    )
+    parser.add_argument(
+        "--no_verifier", action="store_true", help="Skip Pass 2.5 verifier agent"
+    )
     parser.add_argument("--no_ocr", action="store_true", help="Skip OCR pre-read step")
-    parser.add_argument("--ocr_model", default=None, help="Override OCR model (defaults to vision_model)")
+    parser.add_argument(
+        "--ocr_model",
+        default=None,
+        help="Override OCR model (defaults to vision_model)",
+    )
     args = parser.parse_args()
 
     config = dict(BACKEND_CONFIGS[args.config])  # copy so we don't mutate the preset
@@ -363,7 +425,9 @@ def main() -> None:
 
     # Build agents once — run() creates fresh Crew/Tool per call so this is thread-safe
     print("Initialising agents …")
-    planner = PlannerAgent(backend=config["planner_backend"], model=config["planner_model"])
+    planner = PlannerAgent(
+        backend=config["planner_backend"], model=config["planner_model"]
+    )
     vision_agent = VisionAgent(
         agent_backend=config["planner_backend"],
         agent_model=config["planner_model"],
@@ -374,7 +438,9 @@ def main() -> None:
     if not args.no_verifier:
         verifier_model = args.verifier_model or config["vision_model"]
         verifier = VerifierAgent(backend=config["vision_backend"], model=verifier_model)
-        print(f"Verifier         : enabled ({config['vision_backend']} / {verifier_model})")
+        print(
+            f"Verifier         : enabled ({config['vision_backend']} / {verifier_model})"
+        )
     else:
         print("Verifier         : disabled (--no_verifier)")
 
@@ -391,20 +457,39 @@ def main() -> None:
         for i, sample in enumerate(samples, 1):
             print(f"[{i}/{len(samples)}] {sample.sample_id} …", end=" ", flush=True)
             try:
-                path = process_sample(sample, planner, vision_agent, config, run_id, out_dir, opik_client, verifier, ocr)
+                path = process_sample(
+                    sample,
+                    planner,
+                    vision_agent,
+                    config,
+                    run_id,
+                    out_dir,
+                    opik_client,
+                    verifier,
+                    ocr,
+                )
                 print(f"OK → {path}")
             except Exception as exc:
                 print(f"ERROR: {exc}")
     else:
         with ThreadPoolExecutor(max_workers=args.workers) as pool:
             future_to_sample = {
-                pool.submit(process_sample, s, planner, vision_agent, config, run_id, out_dir, opik_client, verifier, ocr): s
+                pool.submit(
+                    process_sample,
+                    s,
+                    planner,
+                    vision_agent,
+                    config,
+                    run_id,
+                    out_dir,
+                    opik_client,
+                    verifier,
+                    ocr,
+                ): s
                 for s in samples
             }
-            done = 0
-            for future in as_completed(future_to_sample):
+            for done, future in enumerate(as_completed(future_to_sample), 1):
                 s = future_to_sample[future]
-                done += 1
                 try:
                     path = future.result()
                     print(f"[{done}/{len(samples)}] {s.sample_id} → {path}")

@@ -1,4 +1,4 @@
-"""Generate a self-contained HTML evaluation report.
+r"""Generate a self-contained HTML evaluation report.
 
 Reads metrics.jsonl (required) plus taxonomy.jsonl (optional) and writes a
 single portable HTML file — no external dependencies, no JavaScript required.
@@ -16,6 +16,7 @@ from collections import Counter, defaultdict
 from datetime import datetime
 from pathlib import Path
 from typing import Optional
+
 
 # ---------------------------------------------------------------------------
 # CSS / HTML templates
@@ -96,34 +97,46 @@ _HTML_TEMPLATE = """<!DOCTYPE html>
 # Helpers
 # ---------------------------------------------------------------------------
 
+
 def _acc_class(v: float) -> str:
-    if v >= 0.75: return "acc-high"
-    if v >= 0.40: return "acc-med"
+    """Classify accuracy value into high, medium, or low performance categories."""
+    if v >= 0.75:
+        return "acc-high"
+    if v >= 0.40:
+        return "acc-med"
     return "acc-low"
 
 
 def _verdict_badge(v: str) -> str:
+    """Map verifier verdicts to colored badges for visual emphasis."""
     mapping = {
         "confirmed": "badge-green",
-        "revised":   "badge-yellow",
-        "skipped":   "badge-gray",
+        "revised": "badge-yellow",
+        "skipped": "badge-gray",
     }
     return f'<span class="badge {mapping.get(v, "badge-gray")}">{v}</span>'
 
 
 def _failure_badge(ft: str) -> str:
-    if ft == "correct":    return f'<span class="badge badge-green">{ft}</span>'
-    if ft == "other":      return f'<span class="badge badge-gray">{ft}</span>'
+    """Map failure types to colored badges for visual emphasis.
+
+    'correct' is green, 'other' is gray, all others are red.
+    """
+    if ft == "correct":
+        return f'<span class="badge badge-green">{ft}</span>'
+    if ft == "other":
+        return f'<span class="badge badge-gray">{ft}</span>'
     return f'<span class="badge badge-red">{ft}</span>'
 
 
 def _pct_bar(count: int, total: int, color: str = "#6c5ce7") -> str:
+    """Generate an HTML horizontal bar showing count as a percentage of total."""
     pct = count / total * 100 if total else 0
     return (
         f'<div class="bar-row">'
         f'<div class="bar-label"><span></span><span>{count} ({pct:.1f}%)</span></div>'
         f'<div class="bar-track"><div class="bar-fill" style="width:{pct:.1f}%;background:{color}"></div></div>'
-        f'</div>'
+        f"</div>"
     )
 
 
@@ -131,36 +144,43 @@ def _pct_bar(count: int, total: int, color: str = "#6c5ce7") -> str:
 # Section builders
 # ---------------------------------------------------------------------------
 
+
 def _summary_cards(rows: list, taxonomy: list) -> str:
+    """Build HTML summary cards with accuracy, latency, verifier, and taxonomy."""
     n = len(rows)
     if not n:
         return "<p>No data.</p>"
 
-    acc_vals   = [r.get("answer_accuracy", 0.0) for r in rows]
-    avg_acc    = sum(acc_vals) / n
-    lat_vals   = [r.get("latency_sec", 0.0) for r in rows if r.get("latency_sec")]
-    avg_lat    = sum(lat_vals) / len(lat_vals) if lat_vals else 0.0
-    correct    = sum(1 for v in acc_vals if v >= 1.0)
+    acc_vals = [r.get("answer_accuracy", 0.0) for r in rows]
+    avg_acc = sum(acc_vals) / n
+    lat_vals = [r.get("latency_sec", 0.0) for r in rows if r.get("latency_sec")]
+    avg_lat = sum(lat_vals) / len(lat_vals) if lat_vals else 0.0
+    correct = sum(1 for v in acc_vals if v >= 1.0)
 
-    revised    = sum(1 for r in rows if r.get("verifier_verdict") == "revised")
-    has_ver    = any(r.get("verifier_verdict") not in (None, "skipped") for r in rows)
+    revised = sum(1 for r in rows if r.get("verifier_verdict") == "revised")
+    has_ver = any(r.get("verifier_verdict") not in (None, "skipped") for r in rows)
 
-    has_judge  = any(f"judge_explanation_quality" in r for r in rows)
-    judge_vals = [r.get("judge_explanation_quality", 0.0) for r in rows if "judge_explanation_quality" in r]
-    avg_judge  = sum(judge_vals) / len(judge_vals) if judge_vals else None
+    judge_vals = [
+        r.get("judge_explanation_quality", 0.0)
+        for r in rows
+        if "judge_explanation_quality" in r
+    ]
+    avg_judge = sum(judge_vals) / len(judge_vals) if judge_vals else None
 
     cards = [
-        ("Samples",     str(n),                 ""),
-        ("Accuracy",    f"{avg_acc:.1%}",        f"{correct} correct"),
-        ("Avg Latency", f"{avg_lat:.1f}s",       "planner + vision + verifier"),
+        ("Samples", str(n), ""),
+        ("Accuracy", f"{avg_acc:.1%}", f"{correct} correct"),
+        ("Avg Latency", f"{avg_lat:.1f}s", "planner + vision + verifier"),
     ]
     if has_ver:
-        cards.append(("Verifier Revised", str(revised), f"{revised/n:.1%} of samples"))
+        cards.append(
+            ("Verifier Revised", str(revised), f"{revised / n:.1%} of samples")
+        )
     if avg_judge is not None:
-        cards.append(("Judge Quality",   f"{avg_judge:.2f}", "explanation_quality"))
+        cards.append(("Judge Quality", f"{avg_judge:.2f}", "explanation_quality"))
     if taxonomy:
         n_wrong = sum(1 for t in taxonomy if t.get("failure_type") != "correct")
-        cards.append(("Failures Typed",  str(n_wrong), "by error_taxonomy"))
+        cards.append(("Failures Typed", str(n_wrong), "by error_taxonomy"))
 
     html = '<div class="cards">'
     for label, value, sub in cards:
@@ -169,16 +189,19 @@ def _summary_cards(rows: list, taxonomy: list) -> str:
             f'<div class="label">{label}</div>'
             f'<div class="value">{value}</div>'
             f'<div class="sub">{sub}</div>'
-            f'</div>'
+            f"</div>"
         )
     html += "</div>"
     return html
 
 
 def _accuracy_by_qtype(rows: list) -> str:
+    """Build HTML table of average accuracy and distribution by question type."""
     by_type: dict = defaultdict(list)
     for r in rows:
-        by_type[r.get("question_type", "standard")].append(r.get("answer_accuracy", 0.0))
+        by_type[r.get("question_type", "standard")].append(
+            r.get("answer_accuracy", 0.0)
+        )
 
     html = '<div class="table-wrap"><table>'
     html += "<tr><th>Question Type</th><th>Samples</th><th>Avg Accuracy</th><th>Distribution</th></tr>"
@@ -186,18 +209,23 @@ def _accuracy_by_qtype(rows: list) -> str:
         vals = by_type[qt]
         avg = sum(vals) / len(vals)
         html += (
-            f'<tr>'
-            f'<td>{qt}</td>'
-            f'<td>{len(vals)}</td>'
+            f"<tr>"
+            f"<td>{qt}</td>"
+            f"<td>{len(vals)}</td>"
             f'<td class="{_acc_class(avg)}">{avg:.1%}</td>'
-            f'<td style="width:200px">{_pct_bar(round(sum(vals)), len(vals))}</td>'
-            f'</tr>'
+            f'<td style="width:200px">{_pct_bar(sum(1 for v in vals if v >= 1.0), len(vals))}</td>'
+            f"</tr>"
         )
     html += "</table></div>"
     return html
 
 
 def _verifier_stats(rows: list) -> Optional[str]:
+    """Build HTML verifier verdict distribution table.
+
+    Includes accuracy comparison for confirmed vs revised samples.
+    Returns None if no verifier data is present.
+    """
     verdicts = [r.get("verifier_verdict", "skipped") for r in rows]
     if all(v == "skipped" for v in verdicts):
         return None  # verifier not used
@@ -211,28 +239,40 @@ def _verifier_stats(rows: list) -> Optional[str]:
     for verdict in ("confirmed", "revised", "skipped"):
         c = counts.get(verdict, 0)
         html += (
-            f'<tr><td>{_verdict_badge(verdict)}</td>'
-            f'<td>{c}</td>'
+            f"<tr><td>{_verdict_badge(verdict)}</td>"
+            f"<td>{c}</td>"
             f'<td style="width:260px">{_pct_bar(c, n, colors.get(verdict, "#6c5ce7"))}</td></tr>'
         )
 
     # Accuracy comparison: revised vs confirmed
-    revised_acc   = [r.get("answer_accuracy", 0) for r in rows if r.get("verifier_verdict") == "revised"]
-    confirmed_acc = [r.get("answer_accuracy", 0) for r in rows if r.get("verifier_verdict") == "confirmed"]
+    revised_acc = [
+        r.get("answer_accuracy", 0)
+        for r in rows
+        if r.get("verifier_verdict") == "revised"
+    ]
+    confirmed_acc = [
+        r.get("answer_accuracy", 0)
+        for r in rows
+        if r.get("verifier_verdict") == "confirmed"
+    ]
     if revised_acc and confirmed_acc:
-        avg_rev  = sum(revised_acc)  / len(revised_acc)
+        avg_rev = sum(revised_acc) / len(revised_acc)
         avg_conf = sum(confirmed_acc) / len(confirmed_acc)
         html += (
             f'<tr><td colspan="3" style="background:#f8f9fa; font-size:12px; color:#636e72;">'
-            f'Accuracy when confirmed: <strong>{avg_conf:.1%}</strong> &nbsp;|&nbsp; '
-            f'Accuracy when revised: <strong>{avg_rev:.1%}</strong>'
-            f'</td></tr>'
+            f"Accuracy when confirmed: <strong>{avg_conf:.1%}</strong> &nbsp;|&nbsp; "
+            f"Accuracy when revised: <strong>{avg_rev:.1%}</strong>"
+            f"</td></tr>"
         )
     html += "</table></div>"
     return html
 
 
 def _judge_scores(rows: list) -> Optional[str]:
+    """Build HTML table of LLM judge rubric average scores and distributions.
+
+    Returns None if no judge data is present.
+    """
     judge_keys = [
         "judge_explanation_quality",
         "judge_hallucination_rate",
@@ -253,9 +293,9 @@ def _judge_scores(rows: list) -> Optional[str]:
         avg = sum(vals) / len(vals)
         display = key.replace("judge_", "").replace("_", " ").title()
         html += (
-            f'<tr><td>{display}</td>'
-            f'<td class="{_acc_class(avg) if key != "judge_hallucination_rate" else _acc_class(1-avg)}">'
-            f'{avg:.3f}</td>'
+            f"<tr><td>{display}</td>"
+            f'<td class="{_acc_class(avg) if key != "judge_hallucination_rate" else _acc_class(1 - avg)}">'
+            f"{avg:.3f}</td>"
             f'<td style="width:260px">{_pct_bar(round(avg * 100), 100)}</td></tr>'
         )
     html += "</table></div>"
@@ -263,18 +303,23 @@ def _judge_scores(rows: list) -> Optional[str]:
 
 
 def _taxonomy_breakdown(taxonomy: list) -> str:
+    """Build HTML failure taxonomy table with count and distribution per type.
+
+    Expects taxonomy to be a list of dicts with a ``failure_type`` key.
+    Uses a predefined color scheme: correct=green, other=gray, rest=red.
+    """
     counts = Counter(t.get("failure_type", "other") for t in taxonomy)
-    total  = len(taxonomy)
+    total = len(taxonomy)
     colors = {
-        "correct":               "#00b894",
-        "axis_misread":          "#e17055",
-        "legend_confusion":      "#fd79a8",
-        "arithmetic_mistake":    "#fdcb6e",
-        "hallucinated_element":  "#d63031",
-        "unanswerable_failure":  "#0984e3",
+        "correct": "#00b894",
+        "axis_misread": "#e17055",
+        "legend_confusion": "#fd79a8",
+        "arithmetic_mistake": "#fdcb6e",
+        "hallucinated_element": "#d63031",
+        "unanswerable_failure": "#0984e3",
         "question_misunderstanding": "#6c5ce7",
-        "extraction_error":      "#e84393",
-        "other":                 "#b2bec3",
+        "extraction_error": "#e84393",
+        "other": "#b2bec3",
     }
 
     html = '<div class="table-wrap"><table>'
@@ -282,8 +327,8 @@ def _taxonomy_breakdown(taxonomy: list) -> str:
     for ft, c in counts.most_common():
         color = colors.get(ft, "#6c5ce7")
         html += (
-            f'<tr><td>{_failure_badge(ft)}</td>'
-            f'<td>{c}</td>'
+            f"<tr><td>{_failure_badge(ft)}</td>"
+            f"<td>{c}</td>"
             f'<td style="width:280px">{_pct_bar(c, total, color)}</td></tr>'
         )
     html += "</table></div>"
@@ -291,6 +336,12 @@ def _taxonomy_breakdown(taxonomy: list) -> str:
 
 
 def _sample_table(rows: list, taxonomy_by_id: dict, max_rows: int = 100) -> str:
+    """Build HTML per-sample results table.
+
+    Columns include sample ID, question type, expected vs predicted answers,
+    accuracy, and optionally verifier verdict, failure type, and judge quality.
+    Truncates to max_rows with a note if more rows exist.
+    """
     has_ver = any(r.get("verifier_verdict") not in (None, "skipped", "") for r in rows)
     has_tax = bool(taxonomy_by_id)
     has_judge = any("judge_explanation_quality" in r for r in rows)
@@ -306,24 +357,24 @@ def _sample_table(rows: list, taxonomy_by_id: dict, max_rows: int = 100) -> str:
     html += "<tr>" + "".join(f"<th>{h}</th>" for h in headers) + "</tr>"
 
     for r in rows[:max_rows]:
-        sid  = r.get("sample_id", "")
-        qt   = r.get("question_type", "")
-        exp  = r.get("expected", "")
-        pred = r.get("predicted", "")
-        acc  = r.get("answer_accuracy", 0.0)
+        sid = html.escape(str(r.get("sample_id", "")))
+        qt = html.escape(str(r.get("question_type", "")))
+        exp = html.escape(str(r.get("expected", "")))
+        pred = html.escape(str(r.get("predicted", "")))
+        acc = r.get("answer_accuracy", 0.0)
 
         row = (
             f'<td class="mono">{sid}</td>'
-            f'<td>{qt}</td>'
+            f"<td>{qt}</td>"
             f'<td class="truncate" title="{exp}">{exp}</td>'
             f'<td class="truncate" title="{pred}">{pred}</td>'
             f'<td class="{_acc_class(acc)}">{acc:.2f}</td>'
         )
         if has_ver:
-            row += f'<td>{_verdict_badge(r.get("verifier_verdict", "skipped"))}</td>'
+            row += f"<td>{_verdict_badge(r.get('verifier_verdict', 'skipped'))}</td>"
         if has_tax:
             ft = taxonomy_by_id.get(sid, {}).get("failure_type", "—")
-            row += f'<td>{_failure_badge(ft) if ft != "—" else "—"}</td>'
+            row += f"<td>{_failure_badge(ft) if ft != '—' else '—'}</td>"
         if has_judge:
             jq = r.get("judge_explanation_quality")
             row += f'<td class="{_acc_class(jq) if jq is not None else ""}">{f"{jq:.2f}" if jq is not None else "—"}</td>'
@@ -340,13 +391,22 @@ def _sample_table(rows: list, taxonomy_by_id: dict, max_rows: int = 100) -> str:
 # Main builder
 # ---------------------------------------------------------------------------
 
+
 def build_report(
     metrics_rows: list,
     taxonomy_rows: list,
     out_path: str,
     title: str = "ChartQAPro Evaluation Report",
 ) -> None:
-    config = metrics_rows[0].get("config_name", "unknown") if metrics_rows else "unknown"
+    """Build and write a self-contained HTML evaluation report.
+
+    Sections include summary cards, accuracy by question type, verifier
+    stats, judge scores, failure taxonomy, and a per-sample results table.
+    Writes the result to out_path with embedded CSS (no external deps).
+    """
+    config = (
+        metrics_rows[0].get("config_name", "unknown") if metrics_rows else "unknown"
+    )
     taxonomy_by_id = {t["sample_id"]: t for t in taxonomy_rows if "sample_id" in t}
 
     sections: list[str] = []
@@ -377,7 +437,9 @@ def build_report(
         sections.append(_taxonomy_breakdown(taxonomy_rows))
 
     # 6. Per-sample table
-    sections.append(f"<h2>Per-Sample Results (first {min(len(metrics_rows), 100)})</h2>")
+    sections.append(
+        f"<h2>Per-Sample Results (first {min(len(metrics_rows), 100)})</h2>"
+    )
     sections.append(_sample_table(metrics_rows, taxonomy_by_id))
 
     body = "\n".join(sections)
@@ -398,18 +460,28 @@ def build_report(
 # CLI
 # ---------------------------------------------------------------------------
 
+
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Generate a self-contained HTML evaluation report")
-    parser.add_argument("--metrics",  required=True, help="metrics.jsonl from eval_outputs.py")
-    parser.add_argument("--taxonomy", default=None,  help="taxonomy.jsonl from error_taxonomy.py (optional)")
-    parser.add_argument("--out",      default="report.html", help="Output HTML file")
-    parser.add_argument("--title",    default="ChartQAPro Evaluation Report")
+    """Parse CLI arguments and generate the HTML evaluation report."""
+    parser = argparse.ArgumentParser(
+        description="Generate a self-contained HTML evaluation report"
+    )
+    parser.add_argument(
+        "--metrics", required=True, help="metrics.jsonl from eval_outputs.py"
+    )
+    parser.add_argument(
+        "--taxonomy",
+        default=None,
+        help="taxonomy.jsonl from error_taxonomy.py (optional)",
+    )
+    parser.add_argument("--out", default="report.html", help="Output HTML file")
+    parser.add_argument("--title", default="ChartQAPro Evaluation Report")
     args = parser.parse_args()
 
     metrics_rows: list = []
     with open(args.metrics) as f:
-        for line in f:
-            line = line.strip()
+        for raw_line in f:
+            line = raw_line.strip()
             if line:
                 metrics_rows.append(json.loads(line))
     print(f"Loaded {len(metrics_rows)} rows from {args.metrics}")
@@ -417,8 +489,8 @@ def main() -> None:
     taxonomy_rows: list = []
     if args.taxonomy and Path(args.taxonomy).exists():
         with open(args.taxonomy) as f:
-            for line in f:
-                line = line.strip()
+            for raw_line in f:
+                line = raw_line.strip()
                 if line:
                     taxonomy_rows.append(json.loads(line))
         print(f"Loaded {len(taxonomy_rows)} taxonomy rows from {args.taxonomy}")

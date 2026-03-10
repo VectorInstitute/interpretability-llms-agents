@@ -2,15 +2,15 @@
 
 import json
 import re
-from typing import Any, Optional, Tuple
+from typing import Any, Optional
 
 from json_repair import repair_json
 
 
 def parse_strict(
     text: str,
-    required_keys: Optional[list] = None,
-) -> Tuple[dict, bool]:
+    required_keys: Optional[list[str]] = None,
+) -> tuple[dict[str, Any], bool]:
     """
     Parse JSON from text. Returns (parsed_dict, parse_ok).
 
@@ -55,9 +55,8 @@ def parse_strict(
     return {}, False
 
 
-def _check_keys(result: Any, required_keys: Optional[list]) -> bool:
+def _check_keys(result: Any, required_keys: Optional[list[str]]) -> bool:
+    """Check if result is a dict and contains all required keys (if any)."""
     if not isinstance(result, dict):
         return False
-    if required_keys and not all(k in result for k in required_keys):
-        return False
-    return True
+    return not required_keys or all(k in result for k in required_keys)

@@ -7,13 +7,15 @@ separating perception from reasoning.
 """
 
 import base64
+import json
 import time
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, List, Optional, Type
+from typing import Any, Optional, Type
 
 from crewai.tools import BaseTool
 from pydantic import BaseModel, Field, PrivateAttr
+
 
 _OCR_PROMPT = """\
 Extract ALL visible text from this chart image into structured JSON.
@@ -49,21 +51,24 @@ Rules:
 - JSON only — no markdown code fences, no preamble, no trailing text
 """
 
-_OCR_REQUIRED_KEYS = ["chart_type", "title", "x_axis", "y_axis", "legend"]
-
 
 class OcrReaderInput(BaseModel):
-    image_path: str = Field(description="Absolute or relative path to the chart image file")
+    """Input schema for OcrReaderTool."""
+
+    image_path: str = Field(
+        description="Absolute or relative path to the chart image file"
+    )
 
 
 class OcrReaderTool(BaseTool):
-    """Extracts all visible text from a chart image as structured JSON (no reasoning)."""
+    """Extract all visible text from a chart image as structured JSON."""
 
     name: str = "ocr_reader_tool"
     description: str = (
-        "Extract all visible text from a chart image — axis labels, tick values, legend "
-        "entries, title, data labels, and annotations — as structured JSON. "
-        "Use this BEFORE answering any question to ground your response in observed text."
+        "Extract all visible text from a chart image — axis labels, tick values, "
+        "legend entries, title, data labels, and annotations — as structured JSON. "
+        "Use this BEFORE answering any question to ground your response in observed "
+        "text."
     )
     args_schema: Type[BaseModel] = OcrReaderInput
 
@@ -108,7 +113,18 @@ class OcrReaderTool(BaseTool):
             else:
                 raise ValueError(f"Unknown backend: {self.backend!r}")
         except Exception as exc:
-            raw_text = f'{{"chart_type": "unknown", "title": "", "x_axis": {{"label": "", "ticks": []}}, "y_axis": {{"label": "", "ticks": []}}, "legend": [], "data_labels": [], "annotations": [], "error": "{exc}"}}'
+            raw_text = json.dumps(
+                {
+                    "chart_type": "unknown",
+                    "title": "",
+                    "x_axis": {"label": "", "ticks": []},
+                    "y_axis": {"label": "", "ticks": []},
+                    "legend": [],
+                    "data_labels": [],
+                    "annotations": [],
+                    "error": str(exc),
+                }
+            )
             provider_meta = {"error": str(exc)}
             error_str = str(exc)
 
@@ -145,9 +161,13 @@ class OcrReaderTool(BaseTool):
 
     def _encode_image(self, image_path: str) -> tuple:
         ext = Path(image_path).suffix.lower().lstrip(".")
-        mime = {"jpg": "jpeg", "jpeg": "jpeg", "png": "png", "gif": "gif", "webp": "webp"}.get(
-            ext, "jpeg"
-        )
+        mime = {
+            "jpg": "jpeg",
+            "jpeg": "jpeg",
+            "png": "png",
+            "gif": "gif",
+            "webp": "webp",
+        }.get(ext, "jpeg")
         with open(image_path, "rb") as f:
             b64 = base64.b64encode(f.read()).decode("utf-8")
         return b64, mime
@@ -210,7 +230,9 @@ class OcrReaderTool(BaseTool):
 
         raw_text = response.text or ""
         finish = (
-            str(response.candidates[0].finish_reason) if response.candidates else "unknown"
+            str(response.candidates[0].finish_reason)
+            if response.candidates
+            else "unknown"
         )
         provider_meta = {
             "model": self.model,

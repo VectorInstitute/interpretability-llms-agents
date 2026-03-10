@@ -6,10 +6,10 @@ or called from eval_outputs for a combined single-pass evaluation.
 
 import argparse
 import json
-from pathlib import Path
 import os
 
 from ..mep.writer import iter_meps
+
 
 # Fields that must be present and non-empty for full replayability
 _REPLAY_CHECKS = [
@@ -34,8 +34,8 @@ def _get_nested(obj: dict, *keys) -> object:
 
 
 def check_replayability(mep: dict) -> float:
-    """
-    Returns 0.0–1.0 replayability score.
+    """Return a 0.0–1.0 replayability score.
+
     1.0 means every required field is present and non-empty.
     """
     present = 0
@@ -73,12 +73,15 @@ def evaluate_trace(mep: dict) -> dict:
 
 
 def main() -> None:
+    """Compute trace-level metrics for all MEPs and write to JSONL."""
     parser = argparse.ArgumentParser(description="Trace-based MEP evaluation")
     parser.add_argument("--mep_dir", required=True)
     parser.add_argument("--out", default="trace_metrics.jsonl")
     args = parser.parse_args()
 
-    os.makedirs(os.path.dirname(args.out), exist_ok=True)
+    out_dir = os.path.dirname(args.out)
+    if out_dir:
+        os.makedirs(out_dir, exist_ok=True)
     with open(args.out, "w") as f_out:
         count = 0
         for mep in iter_meps(args.mep_dir):

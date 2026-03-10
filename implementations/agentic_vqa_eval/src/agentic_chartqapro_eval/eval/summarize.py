@@ -1,4 +1,4 @@
-"""Aggregate metrics.jsonl → summary.csv, grouped by config_name and question_type.
+r"""Aggregate metrics.jsonl → summary.csv, grouped by config_name and question_type.
 
 Usage:
     python -m agentic_chartqapro_eval.eval.summarize \\
@@ -7,6 +7,7 @@ Usage:
 """
 
 import argparse
+import contextlib
 import csv
 import json
 from collections import defaultdict
@@ -14,15 +15,14 @@ from typing import List
 
 
 def load_metrics(path: str) -> List[dict]:
+    """Load a metrics JSONL file and return a list of record dicts."""
     records = []
     with open(path) as f:
-        for line in f:
-            line = line.strip()
+        for raw_line in f:
+            line = raw_line.strip()
             if line:
-                try:
+                with contextlib.suppress(json.JSONDecodeError):
                     records.append(json.loads(line))
-                except json.JSONDecodeError:
-                    pass
     return records
 
 
@@ -38,12 +38,15 @@ def _numeric_keys(records: List[dict]) -> List[str]:
 
 
 def aggregate(records: List[dict]) -> dict:
+    """Compute mean and count for all numeric keys across a list of records."""
     if not records:
         return {}
     num_keys = _numeric_keys(records)
     result: dict = {"count": len(records)}
     for key in num_keys:
-        vals = [r[key] for r in records if key in r and isinstance(r[key], (int, float))]
+        vals = [
+            r[key] for r in records if key in r and isinstance(r[key], (int, float))
+        ]
         if vals:
             result[f"{key}_mean"] = round(sum(vals) / len(vals), 4)
             result[f"{key}_n"] = len(vals)
@@ -51,6 +54,7 @@ def aggregate(records: List[dict]) -> dict:
 
 
 def summarize(metrics: List[dict]) -> List[dict]:
+    """Group metrics by config and question type, returning aggregated rows."""
     by_config: dict = defaultdict(list)
     by_config_qtype: dict = defaultdict(list)
 
@@ -76,6 +80,7 @@ def summarize(metrics: List[dict]) -> List[dict]:
 
 
 def write_csv(rows: List[dict], path: str) -> None:
+    """Write a list of dicts to a CSV file at the given path."""
     if not rows:
         print("No rows to write.")
         return
@@ -114,6 +119,7 @@ def _print_summary(rows: List[dict]) -> None:
 
 
 def main() -> None:
+    """Parse CLI arguments and write an aggregated summary CSV."""
     parser = argparse.ArgumentParser(description="Aggregate metrics into summary CSV")
     parser.add_argument("--metrics", required=True, help="Path to metrics.jsonl")
     parser.add_argument("--out", default="summary.csv", help="Output CSV path")
