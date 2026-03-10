@@ -1,13 +1,18 @@
+"""Utilities for splitting video, audio, and SRT files into fixed-length segments."""
+
 import os
 import subprocess
+
 from src.dataset_utils import seconds_to_srt
 from src.media_utils import get_duration
+
 
 def save_segmented_srt(entries, segment_length, video_id, output_dir, total_segments):
     """
     Save segmented SRT files based on a given segment length.
 
-    Parameters:
+    Parameters
+    ----------
     - entries (list): List of subtitle entries with 'start', 'end', and 'text'.
     - segment_length (int): Length of each segment in seconds.
     - video_id (str): Identifier for the video.
@@ -29,7 +34,7 @@ def save_segmented_srt(entries, segment_length, video_id, output_dir, total_segm
     for seg_id in range(total_segments):
         out_path = os.path.join(
             output_dir,
-            f"{video_id}__{seg_id:03d}.srt"  # Format the output filename.
+            f"{video_id}__{seg_id:03d}.srt",  # Format the output filename.
         )
 
         with open(out_path, "w", encoding="utf-8") as f:
@@ -50,6 +55,7 @@ def save_segmented_srt(entries, segment_length, video_id, output_dir, total_segm
 
 
 def split_precisely(input_file, output_dir, prefix, ext, segment_length, min_last=5):
+    """Split a media file into precise fixed-length segments using ffmpeg."""
     total_duration = get_duration(input_file)
 
     full_segments = int(total_duration // segment_length)
@@ -77,45 +83,54 @@ def split_precisely(input_file, output_dir, prefix, ext, segment_length, min_las
             cmd = [
                 "ffmpeg",
                 "-y",
-                "-ss", str(start),
-                "-t", str(duration),
-                "-i", input_file,
-                "-ac", "1",
-                "-ar", "16000",
-                "-c:a", "pcm_s16le",
-                output_path
+                "-ss",
+                str(start),
+                "-t",
+                str(duration),
+                "-i",
+                input_file,
+                "-ac",
+                "1",
+                "-ar",
+                "16000",
+                "-c:a",
+                "pcm_s16le",
+                output_path,
             ]
         else:
             cmd = [
                 "ffmpeg",
                 "-y",
-                "-ss", str(start),
-                "-t", str(duration),
-                "-i", input_file,
-                "-c", "copy",
-                output_path
+                "-ss",
+                str(start),
+                "-t",
+                str(duration),
+                "-i",
+                input_file,
+                "-c",
+                "copy",
+                output_path,
             ]
         subprocess.run(cmd, check=True)
 
+
 def split_video(video_dir, segment_dir, segment_length, max_files: int = None):
     """Split video files in a directory into segments.
-    
+
     Args:
         video_dir (str)
         segment_length (int)
         max_files (int, optional): number of videos to process
     """
-    
-    # output_dir = os.path.join(os.path.dirname(video_dir), 'segment-video')
     output_dir = segment_dir
     os.makedirs(output_dir, exist_ok=True)
 
-    valid_exts = ('.mp4', '.mov', '.mkv', '.avi','.webm')
+    valid_exts = (".mp4", ".mov", ".mkv", ".avi", ".webm")
 
     files = [
-        f for f in sorted(os.listdir(video_dir))
-        if f.lower().endswith(valid_exts)
-        and os.path.isfile(os.path.join(video_dir, f))
+        f
+        for f in sorted(os.listdir(video_dir))
+        if f.lower().endswith(valid_exts) and os.path.isfile(os.path.join(video_dir, f))
     ]
 
     if max_files is not None:
@@ -125,18 +140,12 @@ def split_video(video_dir, segment_dir, segment_length, max_files: int = None):
         input_path = os.path.join(video_dir, filename)
         base_name = os.path.splitext(filename)[0]
 
-        split_precisely(
-            input_path,
-            output_dir,
-            base_name,
-            'mp4',
-            segment_length
-        )
+        split_precisely(input_path, output_dir, base_name, "mp4", segment_length)
 
 
 def split_audio(audio_dir, segment_dir, segment_length, max_files: int = None):
     """Split audio files in a directory.
-    
+
     Args:
         audio_dir (str)
         segment_length (int)
@@ -145,8 +154,9 @@ def split_audio(audio_dir, segment_dir, segment_length, max_files: int = None):
     os.makedirs(segment_dir, exist_ok=True)
 
     files = [
-        f for f in sorted(os.listdir(audio_dir))
-        if f.lower().endswith(('.m4a', '.wav'))
+        f
+        for f in sorted(os.listdir(audio_dir))
+        if f.lower().endswith((".m4a", ".wav"))
         and os.path.isfile(os.path.join(audio_dir, f))
     ]
 
@@ -157,10 +167,4 @@ def split_audio(audio_dir, segment_dir, segment_length, max_files: int = None):
         input_file = os.path.join(audio_dir, filename)
         base_name = os.path.splitext(filename)[0]
 
-        split_precisely(
-            input_file,
-            segment_dir,
-            base_name,
-            'wav',
-            segment_length
-        )
+        split_precisely(input_file, segment_dir, base_name, "wav", segment_length)

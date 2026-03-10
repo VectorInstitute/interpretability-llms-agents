@@ -1,27 +1,26 @@
+"""Inference utilities for frame-level evidence analysis and question answering."""
+
 import os
+import tempfile
 import time
+
+import decord
+import matplotlib.pyplot as plt
 import torch
 import torchaudio
-import tempfile
-import matplotlib.pyplot as plt
-import decord
+
+
 decord.bridge.set_bridge("torch")
-from imagebind.models.imagebind_model import ModalityType
-from src.model.avrag import (
-    sample_frames, 
+from imagebind.models.imagebind_model import ModalityType  # noqa: E402
+from src.model.avrag import (  # noqa: E402
     encode_frames_with_imagebind,
-    sample_audio_windows
+    sample_audio_windows,
+    sample_frames,
 )
 
+
 def run_frame_evidence_analysis(
-    rag,
-    j_res,
-    t_embed,
-    video_paths,
-    audio_paths,
-    m=16,
-    topk_frames=5,
-    gamma=10.0
+    rag, j_res, t_embed, video_paths, audio_paths, m=16, topk_frames=5, gamma=10.0
 ):
     """
     Frame-level evidence analysis using SFS and naive top-K selection.
@@ -36,11 +35,9 @@ def run_frame_evidence_analysis(
     - topk_frames: Number of top frames to select for analysis.
     - gamma: Hyperparameter for SFS selection.
     """
-
     print("\n================ Frame-Level Evidence Analysis ================")
 
     for q_idx, result in enumerate(j_res):
-
         query_key = list(result.keys())[0]
         top1_video_id = result[query_key][0]["file"]
 
@@ -80,7 +77,7 @@ def run_frame_evidence_analysis(
         z = vision_embed * audio_embed
 
         # ---- Naive Top-K ----
-        q_embed = t_embed["embeddings"][q_idx:q_idx+1].to(rag.device)
+        q_embed = t_embed["embeddings"][q_idx : q_idx + 1].to(rag.device)
         z_norm = torch.nn.functional.normalize(z, dim=-1)
         q_norm = torch.nn.functional.normalize(q_embed, dim=-1)
 
@@ -94,9 +91,9 @@ def run_frame_evidence_analysis(
         print("SFS Selected frames:", frame_indices[selected].tolist())
 
         # ---- Visualization ----
-        plt.figure(figsize=(12,3))
+        plt.figure(figsize=(12, 3))
         for i, idx in enumerate(selected):
-            plt.subplot(1, len(selected), i+1)
+            plt.subplot(1, len(selected), i + 1)
             plt.imshow(frames[idx].numpy())
             plt.axis("off")
             plt.title(f"{frame_indices[idx].item()}")
@@ -105,13 +102,14 @@ def run_frame_evidence_analysis(
         plt.show()
 
         # ---- Q Matrix ----
-        Q = rag.build_sfs_Q(z, gamma=gamma).cpu().numpy()
+        q_matrix = rag.build_sfs_Q(z, gamma=gamma).cpu().numpy()  # noqa: N806
 
-        plt.figure(figsize=(6,5))
-        plt.imshow(Q)
+        plt.figure(figsize=(6, 5))
+        plt.imshow(q_matrix)
         plt.colorbar()
         plt.title(f"Q Matrix (gamma={gamma})")
         plt.show()
+
 
 def process_retrieved_files(
     retrieved_files,
@@ -132,16 +130,16 @@ def process_retrieved_files(
     - segment_suffix (str): Suffix for segmented media directories (e.g., "30s").
     - model: The multimodal model to use for generating answers.
     - bsz (int): Batch size for processing.
-    - default_topic (str, optional): Default topic to use if not specified in the retrieved file name.
+    - default_topic (str, optional): Default topic to use if not specified in
+      the retrieved file name.
 
-    Returns:
+    Returns
+    -------
     - dict: A dictionary mapping retrieved file identifiers to generated answers.
     """
-
     agent_answers = {}
 
     for retrieved_item in retrieved_files:
-
         if isinstance(retrieved_item, dict):
             retrieved_file = retrieved_item["file"]
         else:
@@ -163,25 +161,21 @@ def process_retrieved_files(
             root_data_dir,
             topic,
             f"segment-video_{segment_suffix}",
-            f"{segment_name}.mp4"
+            f"{segment_name}.mp4",
         )
 
         audio_path = os.path.join(
             root_data_dir,
             topic,
             f"segment-audio_{segment_suffix}",
-            f"{segment_name}.wav"
+            f"{segment_name}.wav",
         )
-            
+
         if not os.path.exists(video_path):
             print(f"[ERROR] Missing video: {video_path}")
             continue
 
-        inputs = [{
-            "text": question,
-            "video": video_path,
-            "audio": audio_path
-        }]
+        inputs = [{"text": question, "video": video_path, "audio": audio_path}]
 
         inputs = model.prepare_input(inputs)
 
@@ -200,7 +194,7 @@ def process_retrieved_files(
 
 def process_question(source, root_data_dir, segment_suffix, model, bsz, topic):
     """
-    Processes a single question using hybrid pipeline.
+    Process a single question using hybrid pipeline.
 
     Args:
     - source (dict): A dictionary containing the question and retrieved files.
@@ -210,10 +204,10 @@ def process_question(source, root_data_dir, segment_suffix, model, bsz, topic):
     - bsz (int): Batch size for processing.
     - topic (str): Default topic to use if not specified in the retrieved file name.
 
-    Returns:
+    Returns
+    -------
     - dict: The input source dictionary augmented with generated answers.
     """
-
     question = source["question"]
     retrieved_files = source["retrieved_file"]
 

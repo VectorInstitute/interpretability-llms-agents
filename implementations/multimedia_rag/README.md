@@ -174,17 +174,17 @@ Choose:
 
 # References and Resources
 
-1. **[MAGNET: A Multi-agent Framework for Finding Audio-Visual Needles by Reasoning over Multi-Video Haystacks](https://arxiv.org/abs/2506.07016)**  
+1. **[MAGNET: A Multi-agent Framework for Finding Audio-Visual Needles by Reasoning over Multi-Video Haystacks](https://arxiv.org/abs/2506.07016)**
     A comprehensive framework for temporal, causal, and multi-hop retrieval across long video haystacks.
 
 2. **[SONIC-O1: A Real-World Benchmark for Evaluating Multimodal Large Language Models on Audio-Video Understanding](https://arxiv.org/abs/2601.21666)**
     A benchmark for evaluating multimodal LLMs on real-world audio-video understanding tasks.
 
-3. **[VisRAG: Vision-based Retrieval-Augmented Generation on Multi-modality Documents](https://arxiv.org/abs/2410.10594)**  
+3. **[VisRAG: Vision-based Retrieval-Augmented Generation on Multi-modality Documents](https://arxiv.org/abs/2410.10594)**
     A study on retrieval-augmented generation leveraging vision-based multi-modal documents.
 
-4. **[Videos Dataset for LLMs RAG](https://huggingface.co/datasets/elmoghany/Videos-Dataset-For-LLMs-RAG-That-Require-Audio-Vidoes-And-Text)**  
+4. **[Videos Dataset for LLMs RAG](https://huggingface.co/datasets/elmoghany/Videos-Dataset-For-LLMs-RAG-That-Require-Audio-Vidoes-And-Text)**
     A dataset designed for retrieval-augmented generation tasks requiring audio, video, and text.
 
-5. **[SONIC-O1 Dataset](https://huggingface.co/datasets/vector-institute/sonic-o1)**  
+5. **[SONIC-O1 Dataset](https://huggingface.co/datasets/vector-institute/sonic-o1)**
     A dataset for audio-visual question answering tasks across various domains.

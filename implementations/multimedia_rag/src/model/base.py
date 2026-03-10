@@ -1,17 +1,17 @@
+"""Base abstract class defining the interface for all multimodal models."""
+
 from abc import ABC, abstractmethod
 
+
 class BaseModel(ABC):
+    """Define the interface for all multimodal models."""
 
     @abstractmethod
     def prepare_input(self, inputs):
-        """
-        the method to prepare image of different models
-        """
+        """Prepare model input from multi-modal data."""
         pass
-    
+
     @abstractmethod
     def generate(self):
-        """
-        the method to response/infer of different models
-        """
+        """Generate a response from the model given prepared inputs."""
         pass
