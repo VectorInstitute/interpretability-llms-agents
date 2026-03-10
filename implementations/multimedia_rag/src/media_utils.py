@@ -27,10 +27,10 @@ def get_duration(file_path):
         ],
         stdout=subprocess.PIPE,
         stderr=subprocess.STDOUT,
-        check=False,
+        check=True,
+        text=True,
     )
-
-    return float(result.stdout)
+    return float(result.stdout.strip())
 
 
 def list_video_durations(folder_path, threshold_seconds=300):

@@ -154,6 +154,12 @@ def process_retrieved_files(
             segment_name = "__".join(parts[1:])
         else:
             # Local format: 002__000
+            if not default_topic:
+                raise ValueError(
+                    "Local retrieved_file format '002__000' requires a non-empty "
+                    "default_topic, but none was provided. Either supply a default "
+                    "topic or use the global format 'Topic__002__000'."
+                )
             topic = default_topic
             segment_name = retrieved_file
 
@@ -173,6 +179,10 @@ def process_retrieved_files(
 
         if not os.path.exists(video_path):
             print(f"[ERROR] Missing video: {video_path}")
+            continue
+
+        if not os.path.exists(audio_path):
+            print(f"[ERROR] Missing audio: {audio_path}")
             continue
 
         inputs = [{"text": question, "video": video_path, "audio": audio_path}]

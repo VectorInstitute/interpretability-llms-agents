@@ -114,7 +114,7 @@ def build_judge_prompt(entry, retrieval_scores=None, version="v0"):
 
 def run_meta_judge(model, entry, retrieval_scores=None, version="v2"):
     """Run LLM-as-judge aggregation."""
-    judge_prompt = build_judge_prompt(entry, retrieval_scores, version="v2")
+    judge_prompt = build_judge_prompt(entry, retrieval_scores, version=version)
 
     # Use wrapper-style input
     inputs = model.prepare_input([{"text": judge_prompt}])
@@ -159,7 +159,7 @@ def run_meta_aggregation(input_path, output_path, model, version="v2"):
         if all_unanswerable:
             final_answer = "E"
         else:
-            final_answer = run_meta_judge(model, entry, retrieval_scores, version="v2")
+            final_answer = run_meta_judge(model, entry, retrieval_scores, version=version)
 
         entry["meta_answer_letter"] = final_answer
 

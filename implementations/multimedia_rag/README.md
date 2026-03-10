@@ -77,9 +77,9 @@ data/
 
 The expected structure includes:
 
-* videos
-* audios
-* captions
+* video
+* audio
+* caption
 
 ---
 

@@ -12,6 +12,6 @@ class BaseModel(ABC):
         pass
 
     @abstractmethod
-    def generate(self):
+    def generate(self, inputs):
         """Generate a response from the model given prepared inputs."""
         pass

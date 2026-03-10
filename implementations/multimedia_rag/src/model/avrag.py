@@ -36,7 +36,7 @@ class AVRAG:
         # Instantiate model
         if model_path:
             self.model = imagebind_model.imagebind_huge(pretrained=False)
-            self.model.load_state_dict(torch.load(model_path))
+            self.model.load_state_dict(torch.load(model_path, map_location=self.device))
         else:  # download pretrained model automatically
             self.model = imagebind_model.imagebind_huge(pretrained=True)
         self.model.eval()
@@ -52,13 +52,15 @@ class AVRAG:
         }
 
     @torch.no_grad()
-    def encode(self, input_paths, data_type, cache=False) -> dict:  # noqa: PLR0912
+    def encode(self, input_paths, data_type, cache=False, save_cache=False, cache_path=None) -> dict:  # noqa: PLR0912
         """
         Encode input paths into embeddings using ImageBind.
 
         Args:
             input_paths (str or list): Paths to the input data.
             cache (bool): If True, loads the embeddings from a cache file.
+            save_cache (bool): If True, saves embeddings to cache file.
+            cache_path (str, optional): Custom path for cache file. If None, uses default location.
 
         Returns
         -------
@@ -127,14 +129,16 @@ class AVRAG:
 
         result = {"filename": filenames, "embeddings": embeddings}
 
-        # Save cache on CPU only
-        if data_type != ModalityType.TEXT:
-            torch.save(
-                {"filename": filenames, "embeddings": embeddings.cpu()},
-                os.path.join(
+        # Save cache on CPU only when explicitly requested
+        if save_cache and data_type != ModalityType.TEXT:
+            if cache_path is None:
+                cache_path = os.path.join(
                     os.path.dirname(os.path.dirname(input_paths[0])),
                     f"{'video' if data_type == ModalityType.VISION else 'audio'}_embeddings.pt",
-                ),
+                )
+            torch.save(
+                {"filename": filenames, "embeddings": embeddings.cpu()},
+                cache_path,
             )
 
         return result
@@ -450,19 +454,19 @@ def encode_frames_with_imagebind(rag, frames):
     -------
         torch.Tensor: Vision embeddings for the frames
     """
-    # Create temporary directory for frame images
-    tmp_dir = tempfile.mkdtemp()
-    paths = []
+    # Create temporary directory for frame images and ensure cleanup afterwards
+    with tempfile.TemporaryDirectory() as tmp_dir:
+        paths = []
 
-    # Save each frame as a temporary image file
-    for i, frame in enumerate(frames):
-        img = Image.fromarray(frame.numpy())
-        path = os.path.join(tmp_dir, f"{i}.jpg")
-        img.save(path)
-        paths.append(path)
+        # Save each frame as a temporary image file
+        for i, frame in enumerate(frames):
+            img = Image.fromarray(frame.numpy())
+            path = os.path.join(tmp_dir, f"{i}.jpg")
+            img.save(path)
+            paths.append(path)
 
-    # Encode frames using ImageBind vision encoder
-    return rag.encode(paths, ModalityType.VISION)["embeddings"]
+        # Encode frames using ImageBind vision encoder
+        return rag.encode(paths, ModalityType.VISION)["embeddings"]
 
 
 def sample_audio_windows(audio_path, frame_indices, video_fps, window_sec=2.0):
@@ -511,7 +515,7 @@ if __name__ == "__main__":
     # -------------------------------------------------
     # Configuration
     # -------------------------------------------------
-    BASE_DIR = "/projects/aixpert/users/aravind/interpretability_agent_bootcamp/implementations/multimedia_rag/data/Customer_Service_Interactions"
+    BASE_DIR = "<BASE_FOLDER>/data/Customer_Service_Interactions"
 
     VIDEO_DIR = os.path.join(BASE_DIR, "process-video")
     AUDIO_DIR = os.path.join(BASE_DIR, "process-audio")
@@ -604,16 +608,16 @@ if __name__ == "__main__":
 
         audio_clips = sample_audio_windows(top1_audio_path, frame_indices, fps)
 
-        # Save temporary audio clips
-        tmp_audio_dir = tempfile.mkdtemp()
-        tmp_audio_paths = []
+        # Save temporary audio clips and ensure cleanup afterwards
+        with tempfile.TemporaryDirectory() as tmp_audio_dir:
+            tmp_audio_paths = []
 
-        for i, clip in enumerate(audio_clips):
-            tmp_path = os.path.join(tmp_audio_dir, f"{i}.wav")
-            torchaudio.save(tmp_path, clip, 16000)
-            tmp_audio_paths.append(tmp_path)
+            for i, clip in enumerate(audio_clips):
+                tmp_path = os.path.join(tmp_audio_dir, f"{i}.wav")
+                torchaudio.save(tmp_path, clip, 16000)
+                tmp_audio_paths.append(tmp_path)
 
-        audio_embed = rag.encode(tmp_audio_paths, ModalityType.AUDIO)["embeddings"]
+            audio_embed = rag.encode(tmp_audio_paths, ModalityType.AUDIO)["embeddings"]
 
         # ---- Fuse AV ----
         z = vision_embed * audio_embed

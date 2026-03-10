@@ -40,14 +40,14 @@ def get_aligned_paths(video_dir, audio_dir, caption_dir):
     common_ids = sorted(video_ids & audio_ids & caption_ids)
 
     video_paths = [
-        os.path.join(video_dir, f"{video_id}.mp4") for video_id in common_ids
-    ]
+        os.path.join(video_dir, f"{file_id}.mp4") for file_id in common_ids
+        ]
     audio_paths = [
-        os.path.join(audio_dir, f"{audio_id}.wav") for audio_id in common_ids
-    ]
+        os.path.join(audio_dir, f"{file_id}.wav") for file_id in common_ids
+        ]
     caption_paths = [
-        os.path.join(caption_dir, f"{caption_id}.srt") for caption_id in common_ids
-    ]
+        os.path.join(caption_dir, f"{file_id}.srt") for file_id in common_ids
+        ]
 
     return video_paths, audio_paths, caption_paths
 

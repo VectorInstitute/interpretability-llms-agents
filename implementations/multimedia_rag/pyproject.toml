@@ -221,5 +221,5 @@ ref5-multimedia-rag-vlm-qa = [
 
 [tool.uv]
 environments = [
-  "python_version >= '3.10' and python_version <= '3.11' and sys_platform == 'linux'"
+  "python_version >= '3.10' and python_version < '3.11' and sys_platform == 'linux'"
 ]
