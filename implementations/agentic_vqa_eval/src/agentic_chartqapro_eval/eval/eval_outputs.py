@@ -56,7 +56,7 @@ def score_answer_accuracy(expected: str, predicted: str, question_type: str) -> 
     exp_num = _to_number(exp)
     pred_num = _to_number(pred)
     if exp_num is not None and pred_num is not None:
-        if math.isclose(exp_num, pred_num, rel_tol=0.05, abs_tol=0.5):
+        if math.isclose(exp_num, pred_num, rel_tol=0.001, abs_tol=0.5): # tighter tolerance for chart QA, can adjust as needed
             return 1.0
 
     # MCQ substring check
