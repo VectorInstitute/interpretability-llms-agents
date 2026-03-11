@@ -28,7 +28,7 @@ Before starting, you should have:
 
 The following Jupyter notebooks are provided in this folder (under `src/`):
 
-1. **[LLM SAE Tutorial](src/Mechanistic_Interpretability_LLM_Tutorial.ipynb)** — *From black boxes to sparse features*
+1. **[LLM SAE Tutorial](Mechanistic_Interpretability_LLM_Tutorial.ipynb)** — *From black boxes to sparse features*
    - **What you’ll do**:
      - Load an LLM in **TransformerLens** and pick a hook point (e.g. `blocks.L.hook_mlp_out`).
      - Load a pretrained **SAE** (Gemma Scope / SAELens ecosystem) and run:
@@ -40,7 +40,7 @@ The following Jupyter notebooks are provided in this folder (under `src/`):
      - A steering demo showing causal behavioral changes from a single feature direction.
      - Simple “dark matter” proxies: **reconstruction error** + **behavior gap** (e.g., next-token logits / KL gap).
 
-2. **[VLM Tutorial](src/Mechanistic_Interpretability_VLM_Tutorial.ipynb)** — *Where does vision become language?*
+2. **[VLM Tutorial](Mechanistic_Interpretability_VLM_Tutorial.ipynb)** — *Where does vision become language?*
    - **What you’ll do**:
      - Inspect a VLM as **vision encoder → connector (projector) → language model**.
      - Apply a **logit lens** layer-by-layer to watch visual tokens “turn into words”.
@@ -85,8 +85,10 @@ From the **repo root**:
 
 ```bash
 cd implementations/mechanistic_interpretability
-python -m venv .venv
+sudo apt install python3.10 python3.10-venv
+python3.10 -m venv .venv
 source .venv/bin/activate
 pip install -U pip
 pip install -e .
+python -m ipykernel install --user --name mech-interp --display-name "Python (mech-interp)"
 ```
