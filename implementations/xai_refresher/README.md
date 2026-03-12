@@ -16,7 +16,8 @@ Before diving into the materials, ensure you have the following:
 - PyTorch 2.x
 - Basic familiarity with neural networks and image classification
 - Familiarity with Python and Jupyter notebooks
-- A CUDA-capable GPU is recommended for the concept grounding notebook
+- A CUDA-capable GPU is recommended for the concept grounding notebook and the perturbation notebooks
+- Additional libraries for notebooks 5 & 6: `captum`, `transformers` (installed via the same `uv` dependency group)
 
 ## Notebooks
 
@@ -39,6 +40,35 @@ The following Jupyter notebooks are provided in this folder:
    hidden-state features from LLaVA (7B) using Symmetric Non-negative Matrix Factorization
    (SNMF). Covers concept dictionary learning, multimodal grounding (text + image), and
    local interpretations per sample on COCO.
+
+5. **[Perturbation & Robustness — Vision](perturbation_robustness_captum_image.ipynb)** —
+   Covers perturbation-based attribution for image classifiers using the Captum library.
+   Implements Occlusion, Feature Ablation, and Noise Tunnel (SmoothGrad) on a ResNet-18
+   model. Evaluates explanation quality with the Infidelity and Sensitivity metrics.
+   *Do this notebook before the text version.*
+
+6. **[Perturbation & Robustness — Text + Bias](perturbation_robustness_and_bias_text.ipynb)** —
+   Mirrors notebook 5 for transformer-based text classifiers (BERT fine-tuned on SST-2).
+   Implements token ablation and gradient attribution, then extends to explanation robustness
+   under paraphrase, Counterfactual Fairness Distance (CFD) for bias probing, and a Masked
+   Language Model pronoun prediction probe to detect occupational gender stereotypes.
+   *Do after the vision perturbation notebook.*
+
+### Notebooks 5 & 6: Cross-Notebook Connection
+
+These two notebooks are designed as a pair and cover the same core concepts across two modalities:
+
+| Concept                    | Vision notebook (5)              | Text notebook (6)                     |
+| -------------------------- | -------------------------------- | ------------------------------------- |
+| Perturbation attribution   | Occlusion (patch masking)        | Token ablation (`[MASK]` replacement) |
+| Gradient attribution       | Saliency (input gradients)       | Embedding gradient (L2 norm)          |
+| Robustness smoothing       | Noise Tunnel / SmoothGrad        | *(extension)*                         |
+| Faithfulness metric        | Infidelity + Sensitivity (Captum)| Explanation distance (L2)             |
+| Bias analysis              | —                                | CFD + MLM pronoun probe               |
+
+**Key shared insight across both:** perturbation-based methods are more faithful (causal) but
+slower; gradient methods are faster but less stable and more sensitive to surface-level token
+or pixel changes.
 
 ## Package Dependencies
 
@@ -67,6 +97,15 @@ For further reading on the methods covered in this module:
   via Concept Bottlenecks", 2024.
 - **Grad-CAM** — Selvaraju et al., "Grad-CAM: Visual Explanations from Deep Networks via
   Gradient-based Localization", ICCV 2017.
+- **Occlusion / Perturbation Attribution** — Zeiler & Fergus, "Visualizing and Understanding
+  Convolutional Networks", ECCV 2014.
+- **SmoothGrad** — Smilkov et al., "SmoothGrad: removing noise by adding noise", arXiv 2017.
+- **Infidelity & Sensitivity** — Yeh et al., "On the (In)fidelity and Sensitivity of
+  Explanations", NeurIPS 2019.
+- **Explanation Robustness (NLP)** — Atmakuri et al., "Robustness of Explanation Methods for
+  NLP Models", arXiv 2022.
+- **MLM Bias Probing** — Kurita et al., "Measuring Bias in Contextualized Word
+  Representations", ACL Workshop on Gender Bias in NLP 2019.
 
 ## Getting Started
 
@@ -95,6 +134,14 @@ For further reading on the methods covered in this module:
 5. Move to **[clip.ipynb](clip.ipynb)** to see how gradient-based and representation-level
    explanations apply to vision-language models.
 
-6. Finish with **[concept_grounding.ipynb](concept_grounding.ipynb)** for a deep dive into
+6. Continue with **[perturbation_robustness_captum_image.ipynb](perturbation_robustness_captum_image.ipynb)**
+   to explore perturbation-based attribution and explanation faithfulness metrics for vision
+   models using Captum.
+
+7. Follow up with **[perturbation_robustness_and_bias_text.ipynb](perturbation_robustness_and_bias_text.ipynb)**
+   to apply the same perturbation framework to NLP, and extend it to robustness evaluation
+   and bias probing. Note: this notebook downloads `bert-base-uncased` on first run.
+
+8. Finish with **[concept_grounding.ipynb](concept_grounding.ipynb)** for a deep dive into
    concept decomposition and grounding in LLaVA. Note: this notebook requires a GPU and
    will download model weights on first run.
