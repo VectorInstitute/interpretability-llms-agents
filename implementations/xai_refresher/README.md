@@ -17,7 +17,7 @@ Before diving into the materials, ensure you have the following:
 - Basic familiarity with neural networks and image classification
 - Familiarity with Python and Jupyter notebooks
 - A CUDA-capable GPU is recommended for the concept grounding notebook and the perturbation notebooks
-- Additional libraries for notebooks 5 & 6: `captum`, `transformers` (installed via the same `uv` dependency group)
+- Additional libraries for notebooks 5, 6 & 7: `captum`, `transformers`, `datasets` (installed via the same `uv` dependency group)
 
 ## Notebooks
 
@@ -54,7 +54,17 @@ The following Jupyter notebooks are provided in this folder:
    Language Model pronoun prediction probe to detect occupational gender stereotypes.
    *Do after the vision perturbation notebook.*
 
-### Notebooks 5 & 6: Cross-Notebook Connection
+7. **[TCAV — Concept-Level Interpretability](tcav_concept_sensitivity.ipynb)** —
+   Implements Testing with Concept Activation Vectors (TCAV) for a BERT sentiment classifier.
+   Covers CAV training via logistic regression on hidden-layer activations, directional
+   derivative computation, and TCAV score analysis across all 13 transformer layers.
+   Uses real SST-2 sentences (loaded from HuggingFace) as concept examples for stable CAVs.
+   Includes a profession concept probe that reveals BERT-SST2's spurious association between
+   professional-activity sentence structure and positive sentiment — independently corroborating
+   the bias findings from notebook 6 via a completely different method.
+   *Do after notebook 6.*
+
+### Notebooks 5, 6 & 7: Cross-Notebook Connection
 
 These two notebooks are designed as a pair and cover the same core concepts across two modalities:
 
