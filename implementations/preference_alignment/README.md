@@ -181,7 +181,7 @@ source .venv/bin/activate
 >
 > ```bash
 > uv sync --group ref4-llm-alignment-ethics \
->   --index-url https://download.pytorch.org/whl/cu124
+>   --index-url https://download.pytorch.org/whl/cu124 # Not required for Linux users, but may be needed for Windows users
 > ```
 
 ### Installing `flash-attn` (optional, for faster attention)
