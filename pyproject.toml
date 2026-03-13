@@ -150,8 +150,10 @@ ref4-llm-alignment-ethics = [
     "tiktoken==0.7.0",
     "unsloth",
     "unsloth-zoo",
-    "flash-attn==2.7.3",
 ]
+# flash-attn==2.7.3 requires CUDA headers and setuptools at build time;
+# install manually after activating the venv:
+#   pip install flash-attn==2.7.3 --no-build-isolation
 
 ref5-multimedia-rag-vlm = [
     # From implementations/multimedia_rag/pyproject.toml
@@ -396,7 +398,6 @@ members = [
 ]
 
 [tool.uv]
-no-build-isolation-package = ["flash-attn"]
 environments = [
   "sys_platform == 'linux' and platform_machine == 'x86_64'",
 ]

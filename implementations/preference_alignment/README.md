@@ -177,14 +177,22 @@ uv sync --group ref4-llm-alignment-ethics
 source .venv/bin/activate
 ```
 
-`flash-attn==2.7.3` is included in the group and installed automatically with `--no-build-isolation` configured in `pyproject.toml` (it compiles against the installed torch and CUDA headers).
-
 > **CUDA note:** `torch==2.6.0` from PyPI includes CUDA support on Linux. If you specifically need the CUDA 12.4 build, run:
 >
 > ```bash
 > uv sync --group ref4-llm-alignment-ethics \
 >   --index-url https://download.pytorch.org/whl/cu124
 > ```
+
+### Installing `flash-attn` (optional, for faster attention)
+
+`flash-attn` requires CUDA headers and `setuptools` at compile time and cannot be installed via `uv sync`. After activating the venv, install it manually:
+
+```bash
+pip install flash-attn==2.7.3 --no-build-isolation
+```
+
+> **Note:** This step requires a GPU node with CUDA available. Skip it if you are running on a CPU-only machine.
 
 ## Notes
 
