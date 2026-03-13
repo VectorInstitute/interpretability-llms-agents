@@ -215,23 +215,16 @@ src/agentic_chartqapro_eval/
 
 ## Getting Started
 
-### 1. Create and activate the virtual environment inside the folder:
+### 1. Install dependencies
 
-<!-- # python3 -m venv .venv
-# source .venv/bin/activate
-# pip install -e .
+From the **root of the repository**, install the `ref6-agentic-xai-eval` dependency group using `uv`:
 
-# # Add the virtual environment to Jupyter kernel (optional but recommended)
-# python -m ipykernel install --user --name agentic_chartqapro_eval --display-name "Agentic ChartQA Eval" -->
 ```bash
-uv sync
+uv sync --group ref6-agentic-xai-eval
 source .venv/bin/activate
-
-# Add the virtual environment to Jupyter kernel (optional but recommended)
-python -m ipykernel install --user --name agentic_chartqapro_eval --display-name "Agentic ChartQA Eval"
 ```
 
-The project uses `pyproject.toml` (PEP 517/518) at the repo root with a `setuptools` backend. `pip install -e .` installs `agentic_chartqapro_eval` in editable mode from `src/`.
+The `agentic_chartqapro_eval` package is automatically available — it is included in the root package's build configuration and installed as part of the sync.
 
 ### 2. Configure API keys
 

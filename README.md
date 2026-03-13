@@ -30,16 +30,43 @@ recent research, with fully reproducible notebooks and evaluation pipelines.
 ## Getting Started
 
 1. Clone this repository:
+
    ```bash
    git clone <repo-url>
    cd interpretability_agent_bootcamp
    ```
 
-2. Set up the environment. Each implementation has its own dependencies — refer to the README
-   in the relevant `implementations/<topic>/` directory for setup instructions.
+2. Install [uv](https://docs.astral.sh/uv/getting-started/installation/) if you haven't already:
 
-3. Begin with the topic of interest. Each directory contains Jupyter notebooks and a README
-   describing prerequisites, data, and how to run the experiments.
+   ```bash
+   curl -LsSf https://astral.sh/uv/install.sh | sh
+   ```
+
+3. Install dependencies for the topic you want to work with. All dependency groups are defined
+   in the root `pyproject.toml` — install only the group(s) you need:
+
+   | Topic | Group name | Install command |
+   |-------|-----------|-----------------|
+   | XAI Refresher | `ref1-refresher-interpretability` | `uv sync --group ref1-refresher-interpretability` |
+   | Bias & Fairness Analysis | `ref2-transparency-xai-toxicity` | `uv sync --group ref2-transparency-xai-toxicity` |
+   | Preference Alignment (DPO) | `ref4-llm-alignment-ethics` | `uv sync --group ref4-llm-alignment-ethics` |
+   | Multimedia RAG (retrieval) | `ref5-multimedia-rag-vlm` | `uv sync --group ref5-multimedia-rag-vlm` |
+   | Multimedia RAG (QA/VLM) | `ref5-multimedia-rag-vlm-qa` | `uv sync --group ref5-multimedia-rag-vlm-qa` |
+   | Agentic ChartQA Eval | `ref6-agentic-xai-eval` | `uv sync --group ref6-agentic-xai-eval` |
+
+   > **CUDA note (ref4 — Preference Alignment):** The group uses `torch==2.6.0` from PyPI
+   > (which includes CUDA support on Linux). If you specifically need the CUDA 12.4 build, run:
+
+   > ```bash
+   > uv sync --group ref4-llm-alignment-ethics \
+   >   --index-url https://download.pytorch.org/whl/cu124
+   > ```
+
+4. Launch JupyterLab and open the notebooks in the relevant `implementations/<topic>/` directory:
+
+   ```bash
+   uv run jupyter lab
+   ```
 
 ## License
 
@@ -52,4 +79,4 @@ Please read [CONTRIBUTING.md](CONTRIBUTING.md) before submitting pull requests.
 ## Contact
 
 For questions or help navigating this repository, contact Aravind Narayanan at
-aravind.narayanan@vectorinstitute.ai.
+[aravind.narayanan@vectorinstitute.ai](mailto:aravind.narayanan@vectorinstitute.ai)

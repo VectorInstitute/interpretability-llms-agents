@@ -99,21 +99,15 @@ sudo apt install ffmpeg
 
 Used for:
 
-* Segment embedding
-* Cross-modal similarity search
-* Top-k retrieval
+- Segment embedding
+- Cross-modal similarity search
+- Top-k retrieval
+
+From the **root of the repository**:
 
 ```bash
-python3 -m venv .venv-rag
-source .venv-rag/bin/activate
-uv sync --group ref5-multimedia-rag-vlm --active
-pip install ipykernel
-
-python -m ipykernel install --user \
-  --name ref5-env-rag \
-  --display-name "Ref5 (Video RAG)"
-
-deactivate
+uv sync --group ref5-multimedia-rag-vlm
+source .venv/bin/activate
 ```
 
 ---
@@ -122,21 +116,17 @@ deactivate
 
 Used for:
 
-* Qwen Omni multimodal reasoning
-* Answer generation over retrieved segments
+- Qwen Omni multimodal reasoning
+- Answer generation over retrieved segments
+
+From the **root of the repository**:
 
 ```bash
-python3 -m venv .venv-qa
-source .venv-qa/bin/activate
-uv sync --group ref5-multimedia-rag-vlm-qa --active
-pip install ipykernel
-
-python -m ipykernel install --user \
-  --name ref5-env-qa \
-  --display-name "Ref5 (Video QA)"
-
-deactivate
+uv sync --group ref5-multimedia-rag-vlm-qa
+source .venv/bin/activate
 ```
+
+> **Note:** The two groups are mutually exclusive — switch between them by re-running `uv sync --group <name>` as needed.
 
 ---
 

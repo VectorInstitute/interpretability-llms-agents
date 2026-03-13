@@ -14,30 +14,13 @@ The goal is to **analyze and interpret model bias patterns**, not to evaluate a 
 
 ---
 
-## Environment Setup (Recommended)
+## Environment Setup
 
-This project uses a Python 3.10 environment.
-
-### Option A — Using `uv` (recommended)
+From the **root of the repository**, install the `ref2-transparency-xai-toxicity` dependency group using `uv`:
 
 ```bash
-uv venv --python 3.10
+uv sync --group ref2-transparency-xai-toxicity
 source .venv/bin/activate
-uv sync --active
-python -m ipykernel install --user \
-  --name bias-fairness-analysis \
-  --display-name "Bias & Fairness (Py3.10)"
-```
-
-### Option B — Using `venv` + pip
-
-```bash
-python -m venv .venv
-source .venv/bin/activate
-pip install -e .
-python -m ipykernel install --user \
-  --name bias-fairness-analysis \
-  --display-name "Bias & Fairness (Py3.10)"
 ```
 
 ---

@@ -34,9 +34,9 @@ def save_segmented_srt(entries, segment_length, video_id, output_dir, total_segm
     for seg_id in range(total_segments):
         seg_entries = segments[seg_id]
 
-        if len(seg_entries) == 0:
-            # Skip writing empty files.
-            continue
+        # if len(seg_entries) == 0:
+        #     # Skip writing empty files.
+        #     continue
 
         out_path = os.path.join(
             output_dir,

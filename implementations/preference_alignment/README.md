@@ -170,47 +170,21 @@ Once formatted properly, the rest of the pipeline (LLM-as-a-Judge → DPO → Ev
 
 ## Environment Setup
 
-### Create Environment from Scratch
+From the **root of the repository**, install the `ref4-llm-alignment-ethics` dependency group using `uv`:
 
-1. **Load required modules**
 ```bash
-```bash
-# Option 1: If running on a cluster
-module load python/3.10.12
-module load cuda-12.4
-
-# Option 2: If running on Linux/GCP
-sudo apt update
-sudo apt install python3.10 python3.10-venv python3.10-dev
-```
+uv sync --group ref4-llm-alignment-ethics
+source .venv/bin/activate
 ```
 
-2. **Create and activate a virtual environment**
-```bash
-python3.10 -m venv .dpo_env
-source .dpo_env/bin/activate
-```
+`flash-attn==2.7.3` is included in the group and installed automatically with `--no-build-isolation` configured in `pyproject.toml` (it compiles against the installed torch and CUDA headers).
 
-3. **Install PyTorch with CUDA 12.4 support**
-```bash
-pip install torch==2.6.0+cu124 torchvision==0.21.0+cu124 torchaudio==2.6.0+cu124 \
-  --extra-index-url https://download.pytorch.org/whl/cu124
-```
-
-4. **Install project dependencies**
-```bash
-pip install -r dpo_req.txt
-```
-
-5. **Install FlashAttention**
-```bash
-pip install flash-attn==2.7.3 --no-build-isolation
-```
-
-6. **Register the environment as a Jupyter kernel**
-```bash
-python -m ipykernel install --user --name dpo_env --display-name "dpo_env"
-```
+> **CUDA note:** `torch==2.6.0` from PyPI includes CUDA support on Linux. If you specifically need the CUDA 12.4 build, run:
+>
+> ```bash
+> uv sync --group ref4-llm-alignment-ethics \
+>   --index-url https://download.pytorch.org/whl/cu124
+> ```
 
 ## Notes
 
