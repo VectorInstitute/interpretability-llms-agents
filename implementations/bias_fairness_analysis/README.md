@@ -101,8 +101,8 @@ STREAM = True
 TAKE = 50000
 SAMPLE = None
 
-DATA_DIR = f"./data/{DATASET}/"
-OUT_PATH = f"./data/{DATASET}/{DATASET}.parquet"
+DATA_DIR = f"data/{DATASET}/"
+OUT_PATH = f"data/{DATASET}/{DATASET}.parquet"
 ```
 
 The notebook will:
