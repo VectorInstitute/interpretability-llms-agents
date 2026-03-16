@@ -18,7 +18,7 @@ from google import genai
 from openai import OpenAI
 from pydantic import BaseModel, Field, PrivateAttr
 
-from ..opik_integration.tracing import close_span, open_llm_span
+from ..langfuse_integration.tracing import close_span, open_llm_span
 
 
 _OCR_PROMPT = """\
@@ -77,7 +77,7 @@ class OcrReaderTool(BaseTool):
     backend: str = "gemini"
     model: str = "gemini-2.5-flash-lite"
     api_key: str = ""
-    opik_trace: Optional[Any] = None
+    lf_trace: Optional[Any] = None
 
     _traces: list = PrivateAttr(default_factory=list)
 
@@ -116,7 +116,7 @@ class OcrReaderTool(BaseTool):
         t0 = time.time()
 
         opik_span = open_llm_span(
-            self.opik_trace,
+            self.lf_trace,
             name="ocr_reader_tool",
             input_data={"image_path": image_path},
             model=self.model,

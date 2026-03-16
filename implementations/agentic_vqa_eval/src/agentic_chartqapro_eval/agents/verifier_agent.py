@@ -23,7 +23,7 @@ from google import genai
 from openai import OpenAI
 from PIL import Image
 
-from ..opik_integration.tracing import close_span, open_llm_span
+from ..langfuse_integration.tracing import close_span, open_llm_span
 from ..utils.json_strict import parse_strict
 
 
@@ -203,7 +203,7 @@ class VerifierAgent:
         sample,  # PerceivedSample
         plan: dict,
         vision_parsed: dict,
-        opik_trace: Any = None,
+        lf_trace: Any = None,
     ) -> Tuple[str, dict, bool, str]:
         """
         Critically audit a draft answer using a single VLM call.
@@ -250,7 +250,7 @@ class VerifierAgent:
         )
 
         span = open_llm_span(
-            opik_trace,
+            lf_trace,
             name="verifier",
             input_data={"prompt": prompt, "draft_answer": draft_answer},
             model=self.model,

@@ -6,7 +6,7 @@ Welcome to **Reference Implementation 6** of the Survey Paper on Agentic Visual 
 
 The core contribution is the **Model Evaluation Packet (MEP)** — a portable JSON trace that captures everything: the inspection plan, the vision agent's reasoning, the verifier's critique, tool call logs, timestamps, and errors. This enables reproducible evaluation, post-hoc explainability analysis, and model comparison across VLM backends.
 
-**Observability layer:** Integration with **[Opik](https://github.com/comet-ml/opik)** (self-hosted) for live trace visualization, prompt versioning, dataset registration, and experiment comparison across configs — all without changing the MEP ground-truth artifacts.
+**Observability layer:** Integration with **[Langfuse](https://langfuse.com)** (cloud or self-hosted) for live trace visualization, prompt versioning, dataset registration, and experiment comparison across configs — all without changing the MEP ground-truth artifacts.
 
 ---
 
@@ -154,7 +154,7 @@ This framework produces explainability signals at four distinct levels:
 | `json_repair` | 0.25.3 | Fallback JSON parsing when LLM output is malformed |
 | `python-dotenv` | 1.1.1 | API key management via `.env` file |
 | `pandas` | 2.3.3 | Metric aggregation and summary CSV generation |
-| `opik` | latest | Trace visualization, prompt versioning, dataset registration |
+| `langfuse` | latest | Trace visualization, prompt versioning, dataset registration |
 | `matplotlib` | ≥3.7 | Charts in notebook and dashboard |
 | `streamlit` | ≥1.32 | Interactive evaluation dashboard |
 | `jupyter` / `ipykernel` | latest | Analysis notebook |
@@ -203,12 +203,12 @@ src/agentic_chartqapro_eval/
 │   ├── dashboard.py        — Streamlit interactive dashboard: sample browser, chart image viewer
 │   └── summarize.py        — Aggregate metrics.jsonl → summary.csv
 │
-└── opik_integration/
-    ├── client.py           — Opik client singleton (gracefully disabled if not configured)
+└── langfuse_integration/
+    ├── client.py           — Langfuse client singleton (gracefully disabled if not configured)
     ├── tracing.py          — sample_trace(), open_llm_span(), close_span() helpers
-    ├── prompts.py          — Push planner.txt / vision.txt to Opik Prompt Library
-    ├── dataset.py          — Register ChartQAPro samples as an Opik Dataset
-    └── ingest.py           — Retroactively import existing MEP files into Opik
+    ├── prompts.py          — Push planner.txt / vision.txt to Langfuse Prompt Management
+    ├── dataset.py          — Register ChartQAPro samples as a Langfuse Dataset
+    └── ingest.py           — Retroactively import existing MEP files into Langfuse
 ```
 
 ---
@@ -217,10 +217,10 @@ src/agentic_chartqapro_eval/
 
 ### 1. Install dependencies
 
-From the **root of the repository**, install the `agentic-xai-eval` dependency group using `uv`:
+From the **root of the repository**, install the `ref6-agentic-xai-eval` dependency group using `uv`:
 
 ```bash
-uv sync --group agentic-xai-eval
+uv sync --group ref6-agentic-xai-eval
 source .venv/bin/activate
 ```
 
@@ -229,11 +229,16 @@ The `agentic_chartqapro_eval` package is automatically available — it is inclu
 ### 2. Configure API keys
 
 ```bash
+# From the repo root:
 cp .env.example .env
 # Edit .env and fill in your keys:
 #   OPENAI_API_KEY=...
 #   GEMINI_API_KEY=...
+#   LANGFUSE_PUBLIC_KEY=...   # optional — for observability
+#   LANGFUSE_SECRET_KEY=...
 ```
+
+The `.env` file lives at the **repo root**. `load_dotenv()` searches upward from the working directory, so it is found automatically regardless of which subdirectory you run commands from.
 
 ### 3. Generate MEPs (run the agentic pipeline)
 
@@ -282,7 +287,7 @@ uv run --env-file .env -m agentic_chartqapro_eval.runner.run_generate_meps \
 
 To disable OCR entirely (matches the original pipeline behaviour, faster and lower cost):
 ```bash
-uv run --env-file .env -m agentic_chartqapro_eval.runner.run_generate_meps \
+uv run --env-file .env -magentic_chartqapro_eval.runner.run_generate_meps \
     --split test --n 25 --config gemini_gemini --no_ocr
 ```
 
@@ -320,7 +325,7 @@ uv run --env-file .env -m agentic_chartqapro_eval.eval.eval_traces \
 Re-queries the VLM for each MEP asking for the 3 most likely candidate answers:
 
 ```bash
-uv run --env-file .env -m agentic_chartqapro_eval.eval.eval_topk \
+uv run --env-file .env -magentic_chartqapro_eval.eval.eval_topk \
     --mep_dir meps/gemini_gemini/chartqapro/test \
     --out output/topk_metrics.jsonl \
     --backend gemini \
@@ -333,7 +338,7 @@ This pass does **not** modify existing MEPs or `metrics.jsonl`.
 ### 7. Summarize results
 
 ```bash
-uv run --env-file .env -m agentic_chartqapro_eval.eval.summarize \
+uv run --env-file .env -magentic_chartqapro_eval.eval.summarize \
     --metrics output/metrics.jsonl \
     --out output/summary.csv
 ```
@@ -448,17 +453,17 @@ Pre-built cells walk through: loading MEPs, accuracy by question type, verifier 
 
 ---
 
-## Opik Observability (Self-Hosted)
+## Langfuse Observability
 
-Opik is an open-source LLM observability platform that adds a live visualization and experiment-comparison layer on top of the MEP artifacts. MEPs remain the portable ground truth; Opik is purely additive.
+Langfuse is an open-source LLM observability platform that adds a live visualization and experiment-comparison layer on top of the MEP artifacts. MEPs remain the portable ground truth; Langfuse is purely additive.
 
-### What Opik gives you
+### What Langfuse gives you
 
 | Feature | Detail |
 |---|---|
-| **Trace viewer** | Every sample becomes a trace with `planner` and `vision_qa_tool` child spans showing prompts, outputs, token usage, and latency |
+| **Trace viewer** | Every sample becomes a trace with `planner` and `vision_qa_tool` child generations showing prompts, outputs, token usage, and latency |
 | **Feedback scores** | `answer_accuracy` and all five `judge_*` rubric scores are attached to each trace after eval |
-| **Prompt Library** | `planner.txt` and `vision.txt` are versioned — every experiment links to the exact prompt version used |
+| **Prompt Management** | `planner.txt` and `vision.txt` are versioned — every experiment links to the exact prompt version used |
 | **Dataset registry** | ChartQAPro samples are registered so experiments formally reference a dataset version |
 | **Experiment comparison** | `openai_openai` vs `gemini_gemini` side-by-side with accuracy distributions and latency CDFs |
 
@@ -468,183 +473,76 @@ Opik is an open-source LLM observability platform that adds a live visualization
 Trace: chartqapro/000002  [openai_openai | standard | 11.4s]
   input:    {question, expected_output}
   output:   {answer, explanation}
-  feedback: answer_accuracy=1.0, judge_explanation_quality=0.9, ...
-  ├── Span: planner          [llm | gpt-4o | 2.1s]
+  scores:   answer_accuracy=1.0, judge_explanation_quality=0.9, ...
+  ├── Generation: planner          [gpt-4o | 2.1s]
   │     input: {prompt}
   │     output: {plan_steps: [...], parse_error: false}
-  ├── Span: vision_agent     [llm | gpt-4o | 5.6s]
-  │     └── Span: vision_qa_tool  [llm | gpt-4o | 2.9s | 688 tokens]
+  ├── Generation: vision_agent     [gpt-4o | 5.6s]
+  │     └── Generation: vision_qa_tool  [gpt-4o | 2.9s | 688 tokens]
   │           input:  {image_path, question, plan_steps}
   │           output: {answer, explanation}
-  └── Span: verifier         [llm | gpt-4o | 3.7s]
+  └── Generation: verifier         [gpt-4o | 3.7s]
         input:  {prompt, draft_answer}
         output: {verdict: "confirmed" | "revised", answer, reasoning}
 ```
 
-### 1. Intall and Setup Docker
+### 1. Get API keys
 
-#### Update packages and install Docker.
+**Cloud (recommended — no infrastructure needed):**
+
+1. Sign up at [cloud.langfuse.com](https://cloud.langfuse.com)
+2. Create a new project
+3. Go to **Settings → API Keys** and create a key pair
+
+**Self-hosted:**
+
+Follow the [Langfuse self-hosting guide](https://langfuse.com/docs/deployment/self-host) to deploy with Docker Compose, then create API keys in the UI.
+
+### 2. Configure the connection
+
+Add to your `.env` at the repo root:
+
+```
+LANGFUSE_PUBLIC_KEY=pk-lf-...
+LANGFUSE_SECRET_KEY=sk-lf-...
+# LANGFUSE_HOST=https://cloud.langfuse.com  # default; change for self-hosted
+```
+
+The framework auto-detects these variables. If they are absent, all Langfuse calls are silent no-ops and the pipeline runs exactly as before.
+
+### 3. Push prompt versions to Langfuse
+
+Run once before starting experiments. This creates versioned entries for `planner.txt` and `vision.txt` in Langfuse Prompt Management so every future experiment links to the exact prompt version used.
 
 ```bash
-sudo apt update
-sudo apt install -y docker.io
+uv run --env-file .env -m -m agentic_chartqapro_eval.langfuse_integration.prompts
 ```
 
-Verify installation:
+### 4. Register the dataset
 
 ```bash
-docker --version
-```
-
-#### Start the Docker daemon
-
-Some cloud environments do not run systemd, so start Docker manually.
-
-```bash
-sudo dockerd > /tmp/dockerd.log 2>&1 &
-```
-
-Verify Docker is running:
-
-```bash
-sudo docker info
-```
-
-#### Install Docker Compose v2
-
-Create plugin directory:
-
-```bash
-sudo mkdir -p /usr/lib/docker/cli-plugins
-```
-
-Download the Compose plugin:
-
-```bash
-sudo curl -SL https://github.com/docker/compose/releases/download/v2.27.0/docker-compose-linux-x86_64 \
--o /usr/lib/docker/cli-plugins/docker-compose
-```
-
-Make it executable:
-
-```bash
-sudo chmod +x /usr/lib/docker/cli-plugins/docker-compose
-```
-
-Verify installation:
-
-```bash
-docker compose version
-```
-
-Expected output example:
-
-```
-Docker Compose version v2.27.0
-```
-
-### 2. Start the self-hosted Opik stack
-
-Requires Docker Desktop (already running if you followed setup above).
-
-```bash
-# Clone the Opik repository.
-git clone https://github.com/comet-ml/opik.git /tmp/opik-server --depth=1
-# Navigate to the Docker deployment directory:
-cd /tmp/opik-server/deployment/docker-compose
-# Start the Opik stack with the 'opik' profile:
-sudo docker compose --profile opik up -d
-```
-
-Dashboard is available at **http://localhost:5173** once all containers are healthy (takes ~60 seconds on first pull).
-
-To stop: `docker compose --profile opik down`
-
-#### Verify containers
-
-Check running containers:
-
-```bash
-sudo docker ps
-```
-
-You should see containers similar to:
-
-```
-opik-frontend-1
-opik-backend-1
-opik-python-backend-1
-opik-mysql-1
-opik-redis-1
-opik-clickhouse-1
-```
-
-#### Access Opik
-
-Get your VM external IP:
-
-```bash
-curl ifconfig.me
-```
-
-Open the Opik UI in your browser:
-
-```
-http://<VM_EXTERNAL_IP>:5173
-```
-
-Example:
-
-```
-http://34.xx.xx.xxx:5173
-```
-
-You should now see the **Comet Opik dashboard**.
-
-
-### 3. Configure the connection
-
-Add to your `.env`:
-
-```
-OPIK_URL_OVERRIDE=http://localhost:5173/api
-```
-
-The framework auto-detects this variable. If it is absent, all Opik calls are silent no-ops and the pipeline runs exactly as before.
-
-### 4. Push prompt versions to Opik
-
-Run once before starting experiments. This creates versioned entries for `planner.txt` and `vision.txt` in the Opik Prompt Library so every future experiment links to the exact prompt version used.
-
-```bash
-uv run --env-file .env -m agentic_chartqapro_eval.opik_integration.prompts
-```
-
-### 5. Register the dataset
-
-```bash
-uv run --env-file .env -m agentic_chartqapro_eval.opik_integration.dataset \
+uv run --env-file .env -m agentic_chartqapro_eval.langfuse_integration.dataset \
     --split test --n 25
 ```
 
-This creates a dataset named `ChartQAPro_test` in Opik containing one item per sample (question, expected output, question type, image path).
+This creates a dataset named `ChartQAPro_test` in Langfuse containing one item per sample (question, expected output, question type, image path).
 
-### 6. Live tracing (automatic on new runs)
+### 5. Live tracing (automatic on new runs)
 
-No extra flags needed. When `OPIK_URL_OVERRIDE` is set, the pipeline automatically:
+No extra flags needed. When `LANGFUSE_PUBLIC_KEY` and `LANGFUSE_SECRET_KEY` are set, the pipeline automatically:
 - registers the dataset and versions the prompts at run start
-- opens an Opik trace per sample
-- creates `planner` and `vision_qa_tool` child spans with inputs, outputs, and token usage
-- stores the `opik_trace_id` in the MEP for later score attachment
+- opens a Langfuse trace per sample
+- creates `planner` and `vision_qa_tool` child generations with inputs, outputs, and token usage
+- stores the `lf_trace_id` in the MEP for later score attachment
 
 ```bash
 uv run --env-file .env -m agentic_chartqapro_eval.runner.run_generate_meps \
     --split test --n 25 --config gemini_gemini --workers 4 --out meps/
 ```
 
-### 7. Attach evaluation scores
+### 6. Attach evaluation scores
 
-After running `eval_outputs.py`, accuracy and judge scores are automatically written back to the Opik traces:
+After running `eval_outputs.py`, accuracy and judge scores are automatically written back to the Langfuse traces:
 
 ```bash
 uv run --env-file .env -m agentic_chartqapro_eval.eval.eval_outputs \
@@ -652,12 +550,12 @@ uv run --env-file .env -m agentic_chartqapro_eval.eval.eval_outputs \
     --out metrics.jsonl
 ```
 
-### 8. Ingest existing MEPs (retroactive)
+### 7. Ingest existing MEPs (retroactive)
 
-If you have MEPs from runs before Opik was configured, import them without re-running the pipeline:
+If you have MEPs from runs before Langfuse was configured, import them without re-running the pipeline:
 
 ```bash
-uv run --env-file .env -m agentic_chartqapro_eval.opik_integration.ingest \
+uv run --env-file .env -m agentic_chartqapro_eval.langfuse_integration.ingest \
     --mep_dir meps/gemini_gemini/chartqapro/test \
     --metrics_file metrics.jsonl   # optional: attaches scores if available
 ```
@@ -720,7 +618,7 @@ Each MEP file is a self-contained JSON evaluation artifact:
   },
   "timestamps": { "planner_ms": 2185, "ocr_ms": 1243, "vision_ms": 5684, "verifier_ms": 3712 },
   "errors": [],
-  "opik_trace_id": "tr_abc123..."   // present when Opik tracing is active
+  "lf_trace_id": "abc123..."   // present when Langfuse tracing is active
 }
 ```
 
@@ -740,7 +638,7 @@ Each MEP file is a self-contained JSON evaluation artifact:
 - **OpenAI Vision API** — GPT-4o multimodal inference for chart image understanding ([platform.openai.com](https://platform.openai.com/docs))
 - **Google Gemini API** — Alternative VLM backend for vision inference ([ai.google.dev](https://ai.google.dev/docs))
 - **LLM-as-Judge (Zheng et al., 2023)** — Methodology for using LLMs to score free-form outputs with rubric dimensions ([arXiv:2306.05685](https://arxiv.org/abs/2306.05685))
-- **Opik by Comet ML** — Open-source LLM observability platform used for tracing, prompt versioning, and experiment comparison ([github.com/comet-ml/opik](https://github.com/comet-ml/opik))
+- **Langfuse** — Open-source LLM observability platform used for tracing, prompt versioning, and experiment comparison ([langfuse.com](https://langfuse.com))
 
 ---
 
@@ -789,12 +687,5 @@ They serve different purposes and run at different times:
 
 The verifier improves the pipeline's answer quality; the judge measures the pipeline's reasoning quality.
 
-### 10. Do I need Opik to run the framework?
-No. Opik is entirely optional. If `OPIK_URL_OVERRIDE` is not set in `.env`, all Opik calls are silent no-ops. The pipeline produces the same MEPs, `metrics.jsonl`, and `summary.csv` as before.
-
-### 11. How do I stop the Opik Docker stack?
-```bash
-cd /tmp/opik-server/deployment/docker-compose
-docker compose --profile opik down
-```
-MEPs and metrics files are stored locally and are unaffected. Trace data in Opik is stored in the Docker volumes and will persist across restarts unless you run `docker compose down -v`.
+### 10. Do I need Langfuse to run the framework?
+No. Langfuse is entirely optional. If `LANGFUSE_PUBLIC_KEY` and `LANGFUSE_SECRET_KEY` are not set in `.env`, all Langfuse calls are silent no-ops. The pipeline produces the same MEPs, `metrics.jsonl`, and `summary.csv` as before.
