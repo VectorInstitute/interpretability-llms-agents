@@ -5,7 +5,7 @@ description = ""
 authors = [ {name = "Vector AI Engineering", email = "ai_engineering@vectorinstitute.ai"} ]
 urls = {Repository = "https://github.com/VectorInstitute/interpretability-llms-agents"}
 readme = "README.md"
-license = "LicenseRef-Vector-Institute-Licence"
+license = "LicenseRef-Vector-Institute-License"
 license-files = ["LICENSE.md"]
 requires-python = ">=3.10,<3.13"
 dependencies = [
@@ -86,7 +86,7 @@ conflicts = [
 [tool.uv.sources]
 aieng-llm-interp = { workspace = true }
 lore-sa = { git = "https://github.com/kdd-lab/LORE_sa.git", rev = "abaa480451cd520d659f385d98ecd692d52c66e4" }
-xl-vlm = { git = "https://github.com/mshukor/xl-vlms.git" }
+xl-vlm = { git = "https://github.com/mshukor/xl-vlms.git", rev = "3bd525b070066a52ad974b1ba1c5c206342cb708" }
 language-evaluation = { git = "https://github.com/bckim92/language-evaluation.git" }
 imagebind = { git = "https://github.com/facebookresearch/ImageBind.git", rev = "53680b02d7e37b19b124fa37bae4b6c98c38f5be" }
 
