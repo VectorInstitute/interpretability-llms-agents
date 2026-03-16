@@ -44,9 +44,7 @@ def aggregate(records: List[dict]) -> dict:
     num_keys = _numeric_keys(records)
     result: dict = {"count": len(records)}
     for key in num_keys:
-        vals = [
-            r[key] for r in records if key in r and isinstance(r[key], (int, float))
-        ]
+        vals = [r[key] for r in records if key in r and isinstance(r[key], (int, float))]
         if vals:
             result[f"{key}_mean"] = round(sum(vals) / len(vals), 4)
             result[f"{key}_n"] = len(vals)

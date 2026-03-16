@@ -8,13 +8,18 @@ separating perception from reasoning.
 
 import base64
 import json
+import os
 import time
 from datetime import datetime, timezone
-from pathlib import Path
 from typing import Any, Optional, Type
 
+import google.generativeai as genai
 from crewai.tools import BaseTool
+from openai import OpenAI
+from PIL import Image
 from pydantic import BaseModel, Field, PrivateAttr
+
+from ..opik_integration.tracing import close_span, open_llm_span
 
 
 _OCR_PROMPT = """\
@@ -55,9 +60,7 @@ Rules:
 class OcrReaderInput(BaseModel):
     """Input schema for OcrReaderTool."""
 
-    image_path: str = Field(
-        description="Absolute or relative path to the chart image file"
-    )
+    image_path: str = Field(description="Absolute or relative path to the chart image file")
 
 
 class OcrReaderTool(BaseTool):
@@ -80,7 +83,14 @@ class OcrReaderTool(BaseTool):
     _traces: list = PrivateAttr(default_factory=list)
 
     def pop_traces(self) -> list:
-        """Return collected traces and clear the buffer."""
+        """
+        Flush and return the tool's execution traces.
+
+        Returns
+        -------
+        list
+            A list of traces collected during tool runs.
+        """
         traces = list(self._traces)
         self._traces.clear()
         return traces
@@ -90,8 +100,19 @@ class OcrReaderTool(BaseTool):
     # ------------------------------------------------------------------
 
     def _run(self, image_path: str) -> str:
-        from ..opik_integration.tracing import close_span, open_llm_span
+        """
+        Execute the OCR extraction logic on a chart image.
 
+        Parameters
+        ----------
+        image_path : str
+            The path to the image file to read.
+
+        Returns
+        -------
+        str
+            A structured JSON string containing all transcribed text elements.
+        """
         start_ts = datetime.now(timezone.utc).isoformat()
         t0 = time.time()
 
@@ -160,23 +181,43 @@ class OcrReaderTool(BaseTool):
     # ------------------------------------------------------------------
 
     def _encode_image(self, image_path: str) -> tuple:
-        ext = Path(image_path).suffix.lower().lstrip(".")
-        mime = {
-            "jpg": "jpeg",
-            "jpeg": "jpeg",
-            "png": "png",
-            "gif": "gif",
-            "webp": "webp",
-        }.get(ext, "jpeg")
+        """
+        Convert an image file into a base64 string for API transmission.
+
+        Parameters
+        ----------
+        image_path : str
+            Path to the image.
+
+        Returns
+        -------
+        b64 : str
+            The base64 data.
+        mime : str
+            The MIME type for the image.
+        """
         with open(image_path, "rb") as f:
-            b64 = base64.b64encode(f.read()).decode("utf-8")
+            data = f.read()
+        b64 = base64.b64encode(data).decode("utf-8")
+        mime = "png" if image_path.lower().endswith(".png") else "jpeg"
         return b64, mime
 
     def _call_openai(self, image_path: str) -> tuple:
-        import os
+        """
+        Invoke OpenAI's VLM to perform structured text extraction.
 
-        from openai import OpenAI
+        Parameters
+        ----------
+        image_path : str
+            The input image path.
 
+        Returns
+        -------
+        raw_text : str
+            The extracted JSON string.
+        provider_meta : dict
+            API metadata.
+        """
         client = OpenAI(api_key=self.api_key or os.environ.get("OPENAI_API_KEY", ""))
         b64, mime = self._encode_image(image_path)
 
@@ -211,11 +252,21 @@ class OcrReaderTool(BaseTool):
     # ------------------------------------------------------------------
 
     def _call_gemini(self, image_path: str) -> tuple:
-        import os
+        """
+        Invoke Google's Gemini to perform structured text extraction.
 
-        import google.generativeai as genai
-        from PIL import Image
+        Parameters
+        ----------
+        image_path : str
+            The input image path.
 
+        Returns
+        -------
+        raw_text : str
+            The extracted JSON string.
+        provider_meta : dict
+            API metadata.
+        """
         genai.configure(api_key=self.api_key or os.environ.get("GEMINI_API_KEY", ""))
         gemini_model = genai.GenerativeModel(self.model)
         image = Image.open(image_path)
@@ -229,11 +280,7 @@ class OcrReaderTool(BaseTool):
         )
 
         raw_text = response.text or ""
-        finish = (
-            str(response.candidates[0].finish_reason)
-            if response.candidates
-            else "unknown"
-        )
+        finish = str(response.candidates[0].finish_reason) if response.candidates else "unknown"
         provider_meta = {
             "model": self.model,
             "finish_reason": finish,
