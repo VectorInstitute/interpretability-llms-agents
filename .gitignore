@@ -28,3 +28,6 @@ wheels/
 
 implementations/xai_refresher/data/train2014
 implementations/xai_refresher/data/test2014
+implementations/xai_refresher/results
+implementations/bias_fairness_analysis/data
+implementations/bias_fairness_analysis/results
