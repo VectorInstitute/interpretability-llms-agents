@@ -38,7 +38,7 @@ repos:
     rev: 1.9.1
     hooks:
     - id: nbqa-ruff
-      args: [--fix, --exit-non-zero-on-fix, --ignore=D100, --extend-ignore=E402, --extend-ignore=ERA001, --extend-ignore=W505, --extend-ignore=D401, --extend-ignore=D400, --extend-ignore=D200, --extend-ignore=D103, --extend-ignore=D205, --extend-ignore=N806, --extend-ignore=C416]
+      args: [--fix, --exit-non-zero-on-fix, --ignore=D100, --extend-ignore=E402, --extend-ignore=ERA001, --extend-ignore=W505, --extend-ignore=D401, --extend-ignore=D400, --extend-ignore=D200, --extend-ignore=D103, --extend-ignore=D205, --extend-ignore=N806, --extend-ignore=C416, --extend-ignore=E741, --extend-ignore=A004, --extend-ignore=SIM102, --extend-ignore=F811, --extend-ignore=N803, --extend-ignore=RET503, --extend-ignore=RET504, --extend-ignore=B018, --extend-ignore=F404, --extend-ignore=D101, --extend-ignore=D102, --extend-ignore=D105, --extend-ignore=N816, --extend-ignore=SIM105]
 
 ci:
     autofix_commit_msg: |

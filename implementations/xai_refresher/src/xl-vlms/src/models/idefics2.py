@@ -5,16 +5,15 @@ from transformers import AutoModelForVision2Seq, AutoProcessor
 
 from .image_text_model import ImageTextModel
 
+
 __all__ = ["IDEFICS"]
 
 
 class IDEFICS(ImageTextModel):
-
     def init_lora(
         self,
         lora_dir: str,
     ) -> None:
-
         self.lora_dir = lora_dir
         self.language_model_name_prefix = "language_model"
         self.vision_model_name_prefix = "vision_tower"
@@ -28,7 +27,6 @@ class IDEFICS(ImageTextModel):
     def set_model(
         self,
     ) -> None:
-
         self.model_ = AutoModelForVision2Seq.from_pretrained(
             self.model_name_or_path,
             torch_dtype=torch.float16,
@@ -39,19 +37,16 @@ class IDEFICS(ImageTextModel):
     def get_language_model(
         self,
     ) -> Callable:
-
         return self.model_.model.text_model
 
     def get_lm_head(
         self,
     ) -> Callable:
-
         return self.model_.lm_head
 
     def set_processor(
         self,
     ) -> None:
-
         self.processor_ = AutoProcessor.from_pretrained(
             self.processor_name, local_files_only=self.local_files_only
         )
@@ -60,13 +55,11 @@ class IDEFICS(ImageTextModel):
     def set_preprocessor(
         self,
     ) -> None:
-
         self.preprocessor_ = self.preprocess_input
 
     def get_conversation_round(
         self, instruction: str = "What are these?", response: str = ""
     ) -> List[Dict[str, Any]]:
-
         conversation = [
             {
                 "role": "user",
@@ -95,7 +88,6 @@ class IDEFICS(ImageTextModel):
         generation_mode: bool = False,
         **kwargs: Any,
     ) -> str:
-
         conversation = self.get_conversation_round(
             instruction=instruction, response=response
         )

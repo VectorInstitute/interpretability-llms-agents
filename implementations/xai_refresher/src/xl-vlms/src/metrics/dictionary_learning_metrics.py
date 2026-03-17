@@ -1,14 +1,14 @@
 import argparse
 from typing import Any, Callable, Dict, List
 
+import analysis.feature_decomposition as analysis_decomposition
 import clip
 import numpy as np
 import torch
-from nltk.corpus import words
-
-import analysis.feature_decomposition as analysis_decomposition
 from metrics.clipscore import extract_image_features, img_clipscore
 from metrics.utils import get_stopwords, valid_word
+from nltk.corpus import words
+
 
 __all__ = [
     "get_clip_score",
@@ -27,7 +27,6 @@ def get_clip_score(
     logger: Callable = None,
     args: argparse.Namespace = None,
 ) -> Dict[str, Any]:
-
     features = list(features.values())[0]
     metadata = list(metadata.values())[0]
     analysis_model = concepts_dict["analysis_model"]
@@ -143,7 +142,7 @@ def compute_test_clipscore(
 
     image_paths = metadata.get("image_paths", [])
     image_paths = metadata.get("image", [])
-    token_of_interest_mask = metadata.get("token_of_interest_mask", None)
+    token_of_interest_mask = metadata.get("token_of_interest_mask")
     if token_of_interest_mask is not None:
         image_paths = [
             image_paths[i][0]

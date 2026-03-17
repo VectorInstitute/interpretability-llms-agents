@@ -1,17 +1,17 @@
 # inference_helpers.py
 
+import glob
+import json
 import os
 import re
-import json
-import glob
 from pathlib import Path
-from typing import List, Dict, Tuple
+from typing import Dict, List
 
-import torch
 import jsonlines
-from datasets import load_from_disk, load_dataset, DatasetDict
-from transformers import AutoTokenizer
+import torch
+from datasets import DatasetDict, load_dataset, load_from_disk
 from tqdm import tqdm
+from transformers import AutoTokenizer
 
 
 def clean_json_output(text: str) -> str:
@@ -119,12 +119,14 @@ def build_prompt_records(
         hint = chosen if not reverse else (3 - chosen)
         prompt += tpl[3] + str(hint) + tpl[4]
 
-        records.append({
-            "prompt_idx": i,
-            "prompt": prompt,
-            "chosen": chosen,
-            "meta": it,
-        })
+        records.append(
+            {
+                "prompt_idx": i,
+                "prompt": prompt,
+                "chosen": chosen,
+                "meta": it,
+            }
+        )
 
     return records
 
@@ -178,12 +180,14 @@ def run_best_of_n(
             for j in range(out.size(0))
         ]
 
-        scenes.append({
-            "prompt_idx": i,
-            "prompt": prompt,
-            "outputs": gens,
-            "meta": meta,
-        })
+        scenes.append(
+            {
+                "prompt_idx": i,
+                "prompt": prompt,
+                "outputs": gens,
+                "meta": meta,
+            }
+        )
 
         if len(scenes) % checkpoint_every == 0:
             save_checkpoint(scenes, task_name, checkpoint_dir, len(scenes))
@@ -191,6 +195,7 @@ def run_best_of_n(
     for s in scenes:
         writer.write(s)
     writer.close()
+
 
 def run_batched_inference(
     records,
@@ -206,7 +211,7 @@ def run_batched_inference(
     results = []
 
     for i in range(0, len(records), batch_size):
-        batch = records[i:i + batch_size]
+        batch = records[i : i + batch_size]
         prompts = [r["prompt"] for r in batch]
 
         inputs = tokenizer(
@@ -225,18 +230,19 @@ def run_batched_inference(
             )
 
         gens = tokenizer.batch_decode(
-            outputs[:, inputs["input_ids"].shape[1]:],
+            outputs[:, inputs["input_ids"].shape[1] :],
             skip_special_tokens=True,
             clean_up_tokenization_spaces=False,
         )
 
         for rec, gen in zip(batch, gens):
-            results.append({
-                "prompt_idx": rec["prompt_idx"],
-                "prompt": rec["prompt"],
-                "output": gen,
-                "meta": rec["meta"],
-            })
+            results.append(
+                {
+                    "prompt_idx": rec["prompt_idx"],
+                    "prompt": rec["prompt"],
+                    "output": gen,
+                    "meta": rec["meta"],
+                }
+            )
 
     return results
-

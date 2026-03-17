@@ -3,6 +3,7 @@ from typing import Callable, Tuple
 
 import torch
 
+
 __all__ = ["get_model_class"]
 
 
@@ -21,7 +22,6 @@ def get_model_class(
     logger: Callable = None,
     args: argparse.Namespace = None,
 ) -> Tuple[Callable]:
-
     if "llava-1.5" in model_name_or_path:
         from models.llava import LLaVA
 

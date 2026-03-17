@@ -2,6 +2,7 @@ from typing import Any, Dict, List
 
 import torch
 
+
 __all__ = [
     "cosine_similarity",
     "l2_distance",
@@ -33,7 +34,6 @@ def l2_distance(batch1: torch.Tensor, batch2: torch.Tensor) -> torch.Tensor:
 def get_token_of_interest_features(
     features: torch.Tensor, token_of_interest_mask: torch.Tensor = None
 ) -> torch.Tensor:
-
     if token_of_interest_mask is not None:
         if isinstance(token_of_interest_mask, list):
             token_of_interest_mask = torch.cat(token_of_interest_mask, dim=0)
@@ -43,7 +43,6 @@ def get_token_of_interest_features(
 
 
 def get_matched_token_of_interest_mask(features_path: List[str]) -> torch.Tensor:
-
     masks = []
     token_of_interest_mask = None
     for feat_path in features_path:
@@ -71,7 +70,8 @@ def get_dict_of_top_k_items(
     - k: The number of top items to extract.
     - reference_dict: if passed, compute the relative values to this dictionary.
 
-    Returns:
+    Returns
+    -------
     - A list of tuples containing the top k key/value pairs sorted by value.
     """
     if reference_dict:

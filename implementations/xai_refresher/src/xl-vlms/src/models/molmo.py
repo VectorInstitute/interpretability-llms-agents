@@ -7,15 +7,14 @@ from transformers import AutoModelForCausalLM, AutoProcessor, GenerationConfig
 
 from .image_text_model import ImageTextModel
 
+
 __all__ = ["Molmo"]
 
 
 class Molmo(ImageTextModel):
-
     def set_model(
         self,
     ) -> None:
-
         self.model_ = AutoModelForCausalLM.from_pretrained(
             self.model_name_or_path,
             trust_remote_code=True,
@@ -27,25 +26,21 @@ class Molmo(ImageTextModel):
     def get_model(
         self,
     ) -> Callable:
-
         return self
 
     def get_language_model(
         self,
     ) -> Callable:
-
         return self.model_.model.transformer
 
     def get_lm_head(
         self,
     ) -> Callable:
-
         return self.model_.model.transformer.ff_out
 
     def set_processor(
         self,
     ) -> None:
-
         self.processor_ = AutoProcessor.from_pretrained(
             self.processor_name,
             local_files_only=self.local_files_only,
@@ -57,7 +52,6 @@ class Molmo(ImageTextModel):
     def set_preprocessor(
         self,
     ) -> None:
-
         self.preprocessor_ = self.preprocess_input
 
     def get_conversation_template(
@@ -66,7 +60,6 @@ class Molmo(ImageTextModel):
         response: str = "",
         **kwargs: Any,
     ) -> Dict[str, Any]:
-
         conversation = instruction
         if response:
             conversation += f" Answer: {response}"
@@ -79,7 +72,6 @@ class Molmo(ImageTextModel):
         response: str = "",
         **kwargs: Any,
     ) -> Dict[str, Any]:
-
         text = self.get_conversation_template(
             instruction=instruction,
             response=response,

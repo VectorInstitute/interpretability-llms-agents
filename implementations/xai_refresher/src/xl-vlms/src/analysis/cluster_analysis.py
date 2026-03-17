@@ -4,15 +4,17 @@ from typing import Any, Callable, Dict, List, Tuple
 
 import matplotlib.pyplot as plt
 import torch
+from analysis.feature_decomposition import decompose_activations
+from analysis.multimodal_grounding import (
+    concept_text_grounding,
+    get_multimodal_grounding,
+)
+from analysis.utils import cosine_similarity, l2_distance
 from PIL import Image
 from scipy import stats
 from scipy.optimize import linear_sum_assignment
 from torchvision import transforms
 
-from analysis.feature_decomposition import decompose_activations
-from analysis.multimodal_grounding import (concept_text_grounding,
-                                           get_multimodal_grounding)
-from analysis.utils import cosine_similarity, l2_distance
 
 __all__ = ["analyse_clusters"]
 
@@ -30,7 +32,6 @@ def analyse_clusters(
     args: argparse.Namespace = None,
     **kwargs: Any,
 ) -> None:
-
     save_data = {}
 
     keys = list(features.keys())
@@ -50,7 +51,6 @@ def analyse_clusters(
 
     # Computing the analysis of original features if analysis_data_original is None
     if analysis_data_original is None:
-
         analysis_data_original = compute_analysis_features(
             features_original,
             metadata_original_feature,
@@ -125,7 +125,6 @@ def analyse_clusters(
         )
 
     if args.visualize_concepts:
-
         visualize_concepts(
             num_concepts=num_concepts,
             shift_grounding_dict=shifted_grounding_dict,
@@ -136,7 +135,6 @@ def analyse_clusters(
         )
 
     if args.compute_recovery_metrics:
-
         metrics = {}
 
         # word recovery
@@ -206,7 +204,6 @@ def analyse_clusters(
         save_data["recovery_metrics"] = metrics
 
     if args.compute_stat_shift_vectors:
-
         stats = {}
 
         (
@@ -220,7 +217,6 @@ def analyse_clusters(
         save_data["shift_stats"] = stats
 
     if save_analysis:
-
         save_data["per_sample_shift"] = per_sample_shift_original_to_finetune
         save_data["shifted_components"] = shifted_comps
         save_data["shift_text_grounding"] = shift_grounding_words
@@ -235,8 +231,6 @@ def analyse_clusters(
         if logger is not None:
             logger.info(f"Saving cluster analysis to: {file_name}")
 
-    return
-
 
 def compute_analysis_features(
     features: torch.Tensor = None,
@@ -246,7 +240,6 @@ def compute_analysis_features(
     logger: Callable = None,
     args: argparse.Namespace = None,
 ) -> Dict[str, Any]:
-
     analysis_data = {}
 
     concepts, activations, _ = decompose_activations(
@@ -280,9 +273,9 @@ def compute_analysis_features(
         "activations",
     ]
     for analysis_key in analysis_keys:
-        assert (
-            analysis_key in grounding_dict
-        ), f"{analysis_key} not found, got {grounding_dict.keys()}."
+        assert analysis_key in grounding_dict, (
+            f"{analysis_key} not found, got {grounding_dict.keys()}."
+        )
         analysis_data[analysis_key] = grounding_dict[analysis_key]
 
     return analysis_data
@@ -340,7 +333,6 @@ def compute_shift_vector(
 
 
 def common_local_indices(metadata_original_feature, meta_data_destination_feature):
-
     original_TOI_presence = metadata_original_feature.get(
         "token_of_interest_mask", None
     )
@@ -349,19 +341,20 @@ def common_local_indices(metadata_original_feature, meta_data_destination_featur
     )
 
     if original_TOI_presence is None or dest_TOI_presence is None:
-        assert (
-            original_TOI_presence is None and dest_TOI_presence is None
-        ), "both or none of of saved analysis should have token_of_interest_mask."
+        assert original_TOI_presence is None and dest_TOI_presence is None, (
+            "both or none of of saved analysis should have token_of_interest_mask."
+        )
 
         # usually the presence arrays should not be None, but just in case:
         len_analysis_original = len(list(metadata_original_feature.values())[0])
         len_analysis_dest = len(list(meta_data_destination_feature.values())[0])
-        assert (
-            len_analysis_original == len_analysis_dest
-        ), "length of both hidden states in original and destination should be the same if their presence mask is not provided."
-        original_TOI_presence, dest_TOI_presence = torch.ones(
-            len_analysis_original
-        ), torch.ones(len_analysis_original)
+        assert len_analysis_original == len_analysis_dest, (
+            "length of both hidden states in original and destination should be the same if their presence mask is not provided."
+        )
+        original_TOI_presence, dest_TOI_presence = (
+            torch.ones(len_analysis_original),
+            torch.ones(len_analysis_original),
+        )
 
     cnt1 = -1
     cnt2 = -1
@@ -426,7 +419,6 @@ def compute_shift_concepts(
     samples_mask_original=None,
     args=None,
 ) -> Any:
-
     # from analysis of features
     original_comp = analysis_data_original["concepts"]
     original_decomp = analysis_data_original["activations"]
@@ -492,7 +484,6 @@ def compute_shift_grounding_words(
     model_class: Callable = None,
     mean_shift_original_to_finetune: torch.Tensor = None,
 ) -> Any:
-
     lm_head = model_class.get_lm_head().float()
     tokenizer = model_class.get_tokenizer()
 
@@ -576,7 +567,6 @@ def visualize_concepts(
     save_dir: str = None,
     save_name: str = None,
 ):
-
     similarity_matrix = cosine_similarity(
         analysis_data_original["concepts"], analysis_data_destination["concepts"]
     )
@@ -621,7 +611,6 @@ def metric_recovery(
     analysis_data_original: Dict[str, Any] = None,
     analysis_data_destination: Dict[str, Any] = None,
 ) -> Tuple[List[int], List[int]]:
-
     similarity_matrix = cosine_similarity(
         analysis_data_original["concepts"], analysis_data_destination["concepts"]
     )
@@ -658,9 +647,7 @@ def metric_recovery(
 
 
 def process_shift_vectors(per_samples_shifts: List[torch.Tensor]) -> Any:
-
     def process_one_concept_shifts(directions):
-
         dot_product_matrix = torch.matmul(directions, directions.T)
 
         lower_triangular = torch.tril(dot_product_matrix, -1)
@@ -715,7 +702,6 @@ def process_shift_vectors(per_samples_shifts: List[torch.Tensor]) -> Any:
     )
 
     for i, directions in enumerate(per_samples_shifts):
-
         (
             cosine_sim_score,
             dot_prod_score,

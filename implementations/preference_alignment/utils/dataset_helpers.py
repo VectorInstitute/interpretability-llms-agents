@@ -2,9 +2,11 @@
 
 import os
 import random
+
 import numpy as np
 import torch
 from datasets import Dataset, DatasetDict, load_dataset
+
 
 def set_seed(seed: int = 2021):
     random.seed(seed)
@@ -24,11 +26,9 @@ Below are the question and the candidate answers:
         "\nAnswer 2:",
     ]
 
+
 def load_parquet_dataset(parquet_path: str):
-    ds_dict = load_dataset(
-        "parquet",
-        data_files={"train": parquet_path}
-    )
+    ds_dict = load_dataset("parquet", data_files={"train": parquet_path})
     return ds_dict["train"]
 
 
@@ -40,13 +40,13 @@ def extract_qa(item, chosen_key, rejected_key, dataset_format: str):
         - "sky"  : structured chat format (list of dicts)
         - "hh"   : raw string conversation format
     """
-
     if dataset_format == "sky":
         question = item[chosen_key][0]["content"]
         ans_chosen = item[chosen_key][-1]["content"]
         ans_rejected = item[rejected_key][-1]["content"]
 
     elif dataset_format == "hh":
+
         def split_qa(text):
             parts = text.split("Assistant:", 1)
             human = parts[0].replace("Human:", "").strip()
@@ -85,20 +85,10 @@ def build_judge_dataset(dataset, dataset_format: str, tag: str = "reward-bench")
             label = 2
 
         question, ans_1, ans_2 = extract_qa(
-            item,
-            chosen_key,
-            rejected_key,
-            dataset_format
+            item, chosen_key, rejected_key, dataset_format
         )
 
-        prompt = (
-            template[0]
-            + question
-            + template[1]
-            + ans_1
-            + template[2]
-            + ans_2
-        )
+        prompt = template[0] + question + template[1] + ans_1 + template[2] + ans_2
 
         new_data["prompt"].append(prompt)
         new_data["q"].append(question)
@@ -111,7 +101,6 @@ def build_judge_dataset(dataset, dataset_format: str, tag: str = "reward-bench")
         idx += 1
 
     return Dataset.from_dict(new_data)
-
 
 
 def save_dataset(dataset: Dataset, save_dir: str):

@@ -4,6 +4,7 @@ from typing import Dict, List, Tuple, Union
 import torch
 from nltk.corpus import words
 
+
 # from helpers.utils import (GIST_FILE_PATH, get_stopwords,
 #                                            valid_word)
 
@@ -41,7 +42,6 @@ def valid_word(word, eng_corpus: List[str], stopwords: List[str]) -> bool:
 def get_words_frequency(
     predictions: List[List[str]], gist_file_path: str = GIST_FILE_PATH
 ) -> Dict[str, int]:
-
     eng_corpus = words.words()
     stopwords = get_stopwords(gist_file_path=gist_file_path)
 

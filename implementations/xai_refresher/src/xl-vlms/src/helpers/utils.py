@@ -7,12 +7,12 @@ import warnings
 from functools import partial
 from typing import Any, Callable, Dict, List, Tuple, Union
 
+import metrics
 import numpy as np
 import torch
+from datasets.constants import WORDS
 from tqdm import tqdm
 
-import metrics
-from datasets.constants import WORDS
 
 __all__ = [
     "register_hooks",
@@ -67,12 +67,9 @@ def update_dict_of_list(item: Dict[str, Any], data: Dict[str, Any]) -> Dict[str,
 def fmatch(name: str, patterns: List[str], exact_match: bool = False) -> bool:
     if exact_match:
         return name in patterns
-    else:
-        # Convert patterns with '*' to proper regex expressions (where * means "any sequence of characters")
-        regex_patterns = [
-            re.compile(re.sub(r"\*", ".*", pattern)) for pattern in patterns
-        ]
-        return any([regex.search(name) for regex in regex_patterns])
+    # Convert patterns with '*' to proper regex expressions (where * means "any sequence of characters")
+    regex_patterns = [re.compile(re.sub(r"\*", ".*", pattern)) for pattern in patterns]
+    return any([regex.search(name) for regex in regex_patterns])
 
 
 def compute_time_left(start_time, iteration: int, num_iterations: int):
@@ -160,16 +157,15 @@ def shift_hidden_states(
                     start_prompt_token_idx=start_prompt_token_idx,
                 )
                 return (output_,) + output[1:]
-            else:
-                output = apply_steering_vector(
-                    output,
-                    vector,
-                    alpha=alpha,
-                    only_generated_tokens=only_generated_tokens,
-                    include_last_prompt_token=include_last_prompt_token,
-                    start_prompt_token_idx=start_prompt_token_idx,
-                )
-                return output
+            output = apply_steering_vector(
+                output,
+                vector,
+                alpha=alpha,
+                only_generated_tokens=only_generated_tokens,
+                include_last_prompt_token=include_last_prompt_token,
+                start_prompt_token_idx=start_prompt_token_idx,
+            )
+            return output
 
     else:
         raise NotImplementedError(
@@ -185,7 +181,6 @@ def extract_token_of_interest_states(
     token_of_interest_idx: Union[int, torch.Tensor] = None,
     token_of_interest_start_token: int = 0,
 ) -> Tuple[torch.Tensor]:
-
     if token_of_interest_start_token != 0:
         # e.g. consider only te answers
         tokens = tokens[:, token_of_interest_start_token:]
@@ -199,9 +194,9 @@ def extract_token_of_interest_states(
     elif pred_tokens.shape[1] < tokens.shape[1]:
         tokens = tokens[:, -pred_tokens.shape[1] :]
 
-    assert (
-        token_of_interest_idx is not None
-    ), f"Please provide the token_of_interest_idx, got {token_of_interest_idx}"
+    assert token_of_interest_idx is not None, (
+        f"Please provide the token_of_interest_idx, got {token_of_interest_idx}"
+    )
 
     # If the token_of_interest splits into different ids, we consider the first one (while skipping eos/bos tokens)
     if not isinstance(token_of_interest_idx, torch.Tensor):
@@ -253,9 +248,9 @@ def extract_states_before_special_tokens(
     elif pred_tokens.shape[1] < tokens.shape[1]:
         tokens = tokens[:, -pred_tokens.shape[1] :]
 
-    assert end_special_tokens is not None and isinstance(
-        end_special_tokens, list
-    ), f"Please provide the list of token_of_interest, got {end_special_tokens}"
+    assert end_special_tokens is not None and isinstance(end_special_tokens, list), (
+        f"Please provide the list of token_of_interest, got {end_special_tokens}"
+    )
 
     # If the token_of_interest splits into different ids, we consider the first one (while skipping eos/bos tokens)
     end_special_tokens_idx = torch.tensor(
@@ -315,7 +310,6 @@ def get_hidden_states(
         elif token_start_end_idx is not None:
             v = v[:, int(token_start_end_idx[0]) : int(token_start_end_idx[1]), :]
         elif extract_token_of_interest:
-
             if save_only_generated_tokens:
                 start_idx_generated_tokens = -kwargs["model_generated_output"].shape[1]
                 token_of_interest_start_token = start_idx_generated_tokens
@@ -323,13 +317,12 @@ def get_hidden_states(
             v, token_of_interest_mask = extract_token_of_interest_states(
                 tokens=v,
                 pred_tokens=kwargs["model_output"],
-                token_of_interest_idx=kwargs.get("token_of_interest_idx", None),
+                token_of_interest_idx=kwargs.get("token_of_interest_idx"),
                 token_of_interest_start_token=token_of_interest_start_token,
             )
             output["token_of_interest_mask"] = token_of_interest_mask
             output["image"] = kwargs["image"]
         elif extract_before_special_tokens:
-
             if save_only_generated_tokens:
                 start_idx_generated_tokens = -kwargs["model_generated_output"].shape[1]
                 token_of_interest_start_token = start_idx_generated_tokens
@@ -361,11 +354,11 @@ def save_hidden_states_to_file(
 ) -> None:
     saved_data = {}
 
-    for data_key in data.keys():
+    for data_key in data:
         if data_key in data_keys:
-            assert (
-                data_key in data
-            ), f"{data_key} not found in data, there is only: {data.keys()}"
+            assert data_key in data, (
+                f"{data_key} not found in data, there is only: {data.keys()}"
+            )
 
             saved_data[data_key] = data[data_key]  # List[Any]
     file_name = os.path.join(
@@ -385,9 +378,9 @@ def save_analysis_to_file(
     saved_data = {}
 
     for data_key in data_keys:
-        assert (
-            data_key in data
-        ), f"{data_key} not found in data, there is only: {data.keys()}"
+        assert data_key in data, (
+            f"{data_key} not found in data, there is only: {data.keys()}"
+        )
 
         saved_data[data_key] = data[data_key]  # List[Any]
     file_name = f"{analysis_saving_path}.pth"
@@ -408,21 +401,21 @@ def register_hooks(
     logger.info("==== REGISTER_HOOKS ====")
     logger.info(f"Exact match: {args.exact_match_modules_to_hook}")
     logger.info(f"Requested modules_to_hook: {modules_to_hook}")
-    if "save_hidden_states" == hook_name:
+    if hook_name == "save_hidden_states":
         # Save the hidden states of all tokens in the sequence
         hook_function = save_hidden_states
         hook_return_function = get_hidden_states
-    elif "save_hidden_states_given_token_idx" == hook_name:
+    elif hook_name == "save_hidden_states_given_token_idx":
         # Save the hidden states at given token index
         hook_function = save_hidden_states
         hook_return_function = partial(get_hidden_states, token_idx=args.token_idx)
-    elif "save_hidden_states_given_token_start_end_idx" == hook_name:
+    elif hook_name == "save_hidden_states_given_token_start_end_idx":
         # Save the hidden states of tokens between start and end index
         hook_function = save_hidden_states
         hook_return_function = partial(
             get_hidden_states, token_start_end_idx=args.token_start_end_idx
         )
-    elif "save_hidden_states_for_token_of_interest" == hook_name:
+    elif hook_name == "save_hidden_states_for_token_of_interest":
         # Save the hidden states of tokens between start and end index
         token_of_interest = args.token_of_interest
 
@@ -443,10 +436,15 @@ def register_hooks(
                     for tok in tokens_of_interest
                 ]
             )
-            check_token = tokenizer.encode(" " + token_of_interest, add_special_tokens=False)[0]
-            if token_of_interest in tokenizer.decode([check_token]): # Check if this check_token is only encoding whitespace
-                token_of_interest_idx = torch.tensor(list(token_of_interest_idx) + [check_token])
-            
+            check_token = tokenizer.encode(
+                " " + token_of_interest, add_special_tokens=False
+            )[0]
+            if token_of_interest in tokenizer.decode(
+                [check_token]
+            ):  # Check if this check_token is only encoding whitespace
+                token_of_interest_idx = torch.tensor(
+                    list(token_of_interest_idx) + [check_token]
+                )
 
         hook_function = save_hidden_states
         hook_return_function = partial(
@@ -456,7 +454,7 @@ def register_hooks(
             token_of_interest_start_token=args.token_of_interest_start_token,
             save_only_generated_tokens=args.save_only_generated_tokens,
         )
-    elif "save_hidden_states_for_token_of_interest_class" == hook_name:
+    elif hook_name == "save_hidden_states_for_token_of_interest_class":
         # Save the hidden states of tokens between start and end index
         token_of_interest = []
         tokens = list(WORDS[args.token_of_interest_class])
@@ -485,7 +483,7 @@ def register_hooks(
             token_of_interest_start_token=args.token_of_interest_start_token,
             save_only_generated_tokens=args.save_only_generated_tokens,
         )
-    elif "save_hidden_states_before_special_tokens" == hook_name:
+    elif hook_name == "save_hidden_states_before_special_tokens":
         hook_function = save_hidden_states
         hook_return_function = partial(
             get_hidden_states,
@@ -537,7 +535,6 @@ def hooks_postprocessing(
 ) -> Callable:
     hook_postprocessing_function = None
     if "save_hidden_states" in hook_name:
-
         data_keys = ["hidden_states", "image"]
         # temp change
         data_keys = ["hidden_states", "image", "model_predictions"]
@@ -591,9 +588,9 @@ def setup_hooks(
     for i, hook_name in enumerate(hook_names):
         if modules_to_hook is not None and i < len(modules_to_hook):
             modules_to_hook_ = modules_to_hook[i]
-            assert isinstance(
-                modules_to_hook_, list
-            ), f"modules_to_hook_ must be of type list. modules_to_hook_: {modules_to_hook_}"
+            assert isinstance(modules_to_hook_, list), (
+                f"modules_to_hook_ must be of type list. modules_to_hook_: {modules_to_hook_}"
+            )
             hook_return_function = register_hooks(
                 model=model,
                 modules_to_hook=modules_to_hook_,

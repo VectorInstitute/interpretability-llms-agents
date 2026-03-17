@@ -17,6 +17,7 @@ def write_mep(mep: MEP, out_dir: str) -> str:
 
 
 def read_mep(path: str) -> dict:
+    """Read MEP (Model Evaluation Protocol) file from the given path."""
     with open(path) as f:
         return json.load(f)
 

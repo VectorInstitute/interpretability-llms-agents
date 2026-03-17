@@ -2,9 +2,9 @@ import argparse
 import pickle
 from typing import Any, Callable, Tuple
 
+from datasets.image_text_dataset import COCODataset, VQAv2Dataset
 from torch.utils.data import DataLoader, Subset
 
-from datasets.image_text_dataset import COCODataset, VQAv2Dataset
 
 __all__ = ["get_dataset_loader"]
 
@@ -24,11 +24,11 @@ def get_dataset_loader(
         dataset_name (str): The name of the dataset.
         args (argparse.Namespace): Arguments including paths, flags, and dataset options.
 
-    Returns:
+    Returns
+    -------
         loader (DataLoader): The DataLoader object for the (subset of) dataset.
         indices (list): The indices of the subset (if applicable) or an empty list.
     """
-
     batch_size = getattr(args, "batch_size", 1)
 
     if dataset_name == "coco":
@@ -75,10 +75,9 @@ def get_dataset_loader(
             pin_memory=True,
         )
     elif args.select_samples_from_ids:
-
-        assert (
-            args.path_to_samples_ids is not None
-        ), 'A path to ids should be given when passing the flag "select_samples_from_ids"'
+        assert args.path_to_samples_ids is not None, (
+            'A path to ids should be given when passing the flag "select_samples_from_ids"'
+        )
         with open(args.path_to_samples_ids, "rb") as handle:
             img_ids = pickle.load(handle)
 
@@ -102,6 +101,6 @@ def get_dataset_loader(
         )
     if logger is not None:
         logger.info(f"Reading dataset: {dataset_name} of size: {len(loader)}")
-    assert len(loader) > 0, f"loader is empty"
+    assert len(loader) > 0, "loader is empty"
 
     return loader

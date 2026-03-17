@@ -4,13 +4,17 @@ import time
 from typing import Any, Callable, Dict, List, Tuple
 
 import torch
-
 from datasets import get_dataset_loader
 from helpers.arguments import get_arguments
 from helpers.logger import log_args, setup_logger
-from helpers.utils import (clear_forward_hooks, clear_hooks_variables,
-                           compute_time_left, set_seed, setup_hooks,
-                           update_dict_of_list)
+from helpers.utils import (
+    clear_forward_hooks,
+    clear_hooks_variables,
+    compute_time_left,
+    set_seed,
+    setup_hooks,
+    update_dict_of_list,
+)
 from models import get_model_class
 from models.image_text_model import ImageTextModel
 
@@ -24,13 +28,11 @@ def inference(
     logger: Callable = None,
     args: argparse.Namespace = None,
 ) -> Tuple[List[Dict[str, Any]], List[bool]]:
-
     num_iterations = len(loader)
     hook_data = {}
     model = model_class.get_model()
     start_time = time.time()
     for i, item in enumerate(loader):
-
         text = item["text"][0]  # for now we support batch size = 1
         image_path = item["image"][0]
         inputs = model_class.preprocessor(
@@ -76,10 +78,9 @@ def inference(
 
 
 if __name__ == "__main__":
-
     args = get_arguments()
 
-    logger = setup_logger(log_file=os.path.join(args.save_dir, f"logs.log"))
+    logger = setup_logger(log_file=os.path.join(args.save_dir, "logs.log"))
 
     set_seed(args.seed)
 

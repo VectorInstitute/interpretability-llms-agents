@@ -5,9 +5,11 @@ from typing import Any, Callable, Dict, List
 
 import language_evaluation
 import torch
+from metrics.utils import (
+    get_number_predictions_with_token_of_interest,
+    get_words_frequency,
+)
 
-from metrics.utils import (get_number_predictions_with_token_of_interest,
-                           get_words_frequency)
 
 __all__ = ["compute_captioning_metrics"]
 
@@ -30,8 +32,9 @@ def compute_captioning_metrics(
     evaluator = language_evaluation.CocoEvaluator(
         verbose=True, coco_types=metrics
     )  # coco_types=["BLEU", "METEOR", "ROUGE_L", "CIDEr", "SPICE"]
-    predictions, targets = list(itertools.chain(*data["model_predictions"])), list(
-        itertools.chain(*data["targets"])
+    predictions, targets = (
+        list(itertools.chain(*data["model_predictions"])),
+        list(itertools.chain(*data["targets"])),
     )
     results = {}
     results["scores"] = evaluator.run_evaluation(predictions, targets)

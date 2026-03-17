@@ -3,6 +3,7 @@ from typing import Any, Callable, Dict
 import requests
 from PIL import Image
 
+
 __all__ = ["ImageTextModel"]
 
 
@@ -14,7 +15,6 @@ class ImageTextModel:
         local_files_only: bool = False,
         **kwargs: Any,
     ):
-
         self.model_name_or_path = model_name_or_path
 
         self.processor_name = processor_name
@@ -78,7 +78,6 @@ class ImageTextModel:
         generation_mode: bool = False,
         **kwargs: Any,
     ) -> Dict[str, Any]:
-
         image = self.preprocess_images(image_file)
         text = self.preprocess_text(
             instruction=instruction,
@@ -115,35 +114,29 @@ class ImageTextModel:
     def get_model(
         self,
     ) -> Callable:
-
         return self.model_
 
     def get_language_model(
         self,
     ) -> Callable:
-
         return self.model_.language_model
 
     def get_lm_head(
         self,
     ) -> Callable:
-
         return self.model_.language_model.lm_head
 
     def get_processor(
         self,
     ) -> Callable:
-
         return self.processor_
 
     def get_preprocessor(
         self,
     ) -> Callable:
-
         return self.preprocessor_
 
     def get_tokenizer(
         self,
     ) -> Callable:
-
         return self.tokenizer_

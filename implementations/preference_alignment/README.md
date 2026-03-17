@@ -14,8 +14,8 @@ Traditional preference alignment (e.g., RLHF-style reward models) trains a model
 
 However, as shown in the following figure:
 
-- Scalar models output only a number → ❌ No explanation  
-- They are more susceptible to dataset bias  
+- Scalar models output only a number → ❌ No explanation
+- They are more susceptible to dataset bias
 - They may learn superficial patterns (e.g., verbosity)
 
 Con-J instead trains an **LLM-as-a-Judge** that generates:
@@ -25,9 +25,9 @@ Con-J instead trains an **LLM-as-a-Judge** that generates:
 
 This improves:
 
-- Interpretability  
-- Robustness to bias  
-- Alignment transparency 
+- Interpretability
+- Robustness to bias
+- Alignment transparency
 
 ![Figure 1: Scalar Reward Model vs Generative Judge](assets/Figure1.png)
 
@@ -39,7 +39,7 @@ The full framework is illustrated in the following figure.
 The process consists of three stages:
 
 ### 1️⃣ Judgment Sampling(Repeated and Hint Sampling)
-Given a prompt `q` and answers `(a₁, a₂)`,  
+Given a prompt `q` and answers `(a₁, a₂)`,
 the pretrained LLM generates multiple **judgments with rationales**.
 
 ### 2️⃣ Judgment Filtering
@@ -53,8 +53,8 @@ These are paired to form **contrastive judgment pairs**.
 ### 3️⃣ Contrastive Training (DPO)
 The LLM is trained using:
 
-- **DPO loss** on contrastive pairs  
-- A small **SFT loss** on positive judgments  
+- **DPO loss** on contrastive pairs
+- A small **SFT loss** on positive judgments
 
 This directly optimizes the model to prefer correct judgments while maintaining generation quality.
 
@@ -208,22 +208,22 @@ These questions are intended to help participants reflect on the design choices 
 
 ### 1. Why does Con-J generate a rationale instead of predicting a scalar reward?
 
-**Answer:**  
+**Answer:**
 Scalar reward models compress evaluation into a single number, which makes their decisions difficult to interpret and audit. Con-J generates both a rationale and a binary decision, increasing transparency and making it easier to detect bias or flawed reasoning.
 
 ### 2. Why is judgment filtering necessary before DPO training?
 
-**Answer:**  
+**Answer:**
 LLM-generated judgments can be inconsistent or biased. Filtering ensures that only correct (positive) judgments are contrasted against incorrect (negative) ones. Without filtering, DPO training could reinforce incorrect reasoning patterns.
 
 ### 3. What advantage does DPO have over RLHF?
 
-**Answer:**  
+**Answer:**
 DPO directly optimizes preference differences without requiring reinforcement learning or PPO-style optimization. It avoids training a separate reward model and is simpler, more stable, and easier to reproduce.
 
 ### 4. How do repeated and hint sampling improve the judge model?
 
-**Answer:**  
+**Answer:**
 Repeated sampling increases diversity in reasoning patterns, while hint sampling encourages informative rationales. This produces stronger contrastive pairs for DPO training and improves robustness.
 
 ### Open Discussion

@@ -3,10 +3,10 @@ from typing import Any, Callable, Dict, List
 
 import numpy as np
 import torch
+from analysis.multimodal_grounding import get_multimodal_grounding
 from sklearn.cluster import KMeans
 from sklearn.decomposition import PCA, DictionaryLearning
 
-from analysis.multimodal_grounding import get_multimodal_grounding
 
 __all__ = [
     "get_feature_matrix",
@@ -69,9 +69,9 @@ def get_feature_matrix(
     module_name: str,
     token_idx: int = None,
 ) -> torch.Tensor:
-    assert (
-        module_name in features[0].keys()
-    ), f"Given module name {module_name} not found among stored modules: {features[0].keys()}"
+    assert module_name in features[0].keys(), (
+        f"Given module name {module_name} not found among stored modules: {features[0].keys()}"
+    )
 
     feat_dim = features[0][module_name].ndim
     if feat_dim == 2:
@@ -114,7 +114,6 @@ def decompose_activations(
 
     This function performs dictionary learning for given representation matrix and extracts concept vectors and their activations.
     """
-
     assert num_concepts is not None, "Number of components is None!"
     assert decomposition_method is not None, "Decomposition method specified is None!"
 
@@ -122,9 +121,9 @@ def decompose_activations(
         # Convert to numpy array for sklearn processing
         mat = mat.cpu().data.numpy()
 
-    assert (
-        len(mat.shape) == 2
-    ), f"Given feature matrix needs to be 2D. Shape encountered {mat.shape}"
+    assert len(mat.shape) == 2, (
+        f"Given feature matrix needs to be 2D. Shape encountered {mat.shape}"
+    )
 
     if decomposition_method == "pca":
         model = PCA(n_components=num_concepts)
