@@ -26,7 +26,7 @@ Before starting, you should have:
 
 ## Notebooks
 
-The following Jupyter notebooks are provided in this folder (under `src/`):
+The following Jupyter notebooks are provided in this folder:
 
 1. **[LLM SAE Tutorial](Mechanistic_Interpretability_LLM_Tutorial.ipynb)** — *From black boxes to sparse features*
    - **What you’ll do**:
