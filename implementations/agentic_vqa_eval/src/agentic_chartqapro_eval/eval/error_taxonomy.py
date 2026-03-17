@@ -198,9 +198,13 @@ def classify_failure(
             )
             raw = resp.choices[0].message.content or ""
         elif backend == "gemini":
-            genai.configure(api_key=api_key or os.environ.get("GEMINI_API_KEY", ""))
-            m = genai.GenerativeModel(model)
-            raw = m.generate_content(prompt + "\n\n(Note: chart image unavailable)").text or ""
+            client = genai.Client(api_key=api_key or os.environ.get("GEMINI_API_KEY", ""))
+            resp = client.models.generate_content(
+                model=model,
+                contents=[prompt + "\n\n(Note: chart image unavailable)"],
+                config=genai.types.GenerateContentConfig(temperature=0, max_output_tokens=256),
+            )
+            raw = resp.text or ""
         else:
             raise ValueError(f"Unknown backend: {backend!r}")
 
