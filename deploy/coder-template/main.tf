@@ -429,3 +429,22 @@ module "vscode-web" {
   subdomain      = false
   order          = 1
 }
+
+resource "coder_app" "streamlit" {
+  count        = 1
+  agent_id     = coder_agent.main.id
+  slug         = "streamlit"
+  display_name = "Streamlit"
+  url          = "http://localhost:8501"
+  icon         = "https://icon.icepanel.io/Technology/svg/Streamlit.svg"
+  subdomain    = false
+  share        = "owner"
+  order        = 2
+
+  healthcheck {
+    url       = "http://localhost:8501/_stcore/health"
+    interval  = 5
+    threshold = 6
+  }
+}
+
