@@ -61,6 +61,7 @@ def _default_scores() -> dict:
     dict
         The initialized scores mapping.
     """
+    return dict.fromkeys(_JUDGE_KEYS, 0.0)
 
 
 def _call_llm(prompt: str, backend: str, model: str, api_key: Optional[str]) -> str:
@@ -95,7 +96,7 @@ def _call_llm(prompt: str, backend: str, model: str, api_key: Optional[str]) -> 
 
     if backend == "gemini":
         client = genai.Client(api_key=api_key or os.environ.get("GEMINI_API_KEY", ""))
-        resp = client.models.generate_content(model, content=prompt)
+        resp = client.models.generate_content(model=model, contents=prompt)
         return resp.text or ""
 
     raise ValueError(f"Unknown judge backend: {backend!r}")
