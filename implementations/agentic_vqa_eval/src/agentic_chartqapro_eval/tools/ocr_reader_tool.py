@@ -267,10 +267,10 @@ class OcrReaderTool(BaseTool):
             API metadata.
         """
         client = genai.Client(api_key=self.api_key or os.environ.get("GEMINI_API_KEY", ""))
-        b64, mime = self._encode_image(image_path)
+        data, mime = self._encode_image(image_path)
         response = client.models.generate_content(
             model=self.model,
-            contents=[genai.types.Part.from_bytes(data=b64, mime_type=f"image/{mime}"), _OCR_PROMPT],
+            contents=[genai.types.Part.from_bytes(data=base64.b64decode(data), mime_type=f"image/{mime}"), _OCR_PROMPT],
             config=genai.types.GenerateContentConfig(temperature=0, max_output_tokens=512),
         )
 

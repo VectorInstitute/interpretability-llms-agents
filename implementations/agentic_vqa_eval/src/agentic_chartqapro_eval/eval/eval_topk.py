@@ -101,10 +101,10 @@ def _call_gemini_topk(
     api_key: Optional[str],
 ) -> str:
     client = genai.Client(api_key=api_key or os.environ.get("GEMINI_API_KEY", ""))
-    b64, mime = _encode_image(image_path)
+    data, mime = _encode_image(image_path)
     resp = client.models.generate_content(
         model=model,
-        contents=[genai.types.Part.from_bytes(data=b64, mime_type=f"image/{mime}"), prompt],
+        contents=[genai.types.Part.from_bytes(data=base64.b64decode(data), mime_type=f"image/{mime}"), prompt],
         config=genai.types.GenerateContentConfig(temperature=0.3, max_output_tokens=256),
     )
     return resp.text or ""
