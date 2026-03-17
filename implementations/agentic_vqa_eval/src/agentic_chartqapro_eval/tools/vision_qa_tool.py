@@ -341,13 +341,9 @@ class VisionQATool(BaseTool):
         prompt = self._build_prompt(question, plan_steps, choices, context)
         b64, mime = self._encode_image(image_path)
 
-
         response = client.models.generate_content(
             model=self.model,
-            contents=[
-                genai.types.Part.from_bytes(data=b64, mime_type=f"image/{mime}"),
-                prompt
-            ],
+            contents=[genai.types.Part.from_bytes(data=b64, mime_type=f"image/{mime}"), prompt],
             config=genai.types.GenerateContentConfig(temperature=0, max_output_tokens=1024),
         )
 

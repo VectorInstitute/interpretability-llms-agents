@@ -11,7 +11,6 @@ import json
 import os
 import time
 from datetime import datetime, timezone
-from pathlib import Path
 from typing import Any, Optional, Type
 
 from crewai.tools import BaseTool
@@ -271,13 +270,9 @@ class OcrReaderTool(BaseTool):
         b64, mime = self._encode_image(image_path)
         response = client.models.generate_content(
             model=self.model,
-            contents=[
-                genai.types.Part.from_bytes(data=b64, mime_type=f"image/{mime}"),
-                _OCR_PROMPT
-            ],
+            contents=[genai.types.Part.from_bytes(data=b64, mime_type=f"image/{mime}"), _OCR_PROMPT],
             config=genai.types.GenerateContentConfig(temperature=0, max_output_tokens=512),
         )
-
 
         raw_text = response.text or ""
         finish = str(response.candidates[0].finish_reason) if response.candidates else "unknown"

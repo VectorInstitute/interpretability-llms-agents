@@ -104,10 +104,7 @@ def _call_gemini_topk(
     b64, mime = _encode_image(image_path)
     resp = client.models.generate_content(
         model=model,
-        contents=[
-            genai.types.Part.from_bytes(data=b64, mime_type=f"image/{mime}"),
-            prompt
-        ],
+        contents=[genai.types.Part.from_bytes(data=b64, mime_type=f"image/{mime}"), prompt],
         config=genai.types.GenerateContentConfig(temperature=0.3, max_output_tokens=256),
     )
     return resp.text or ""

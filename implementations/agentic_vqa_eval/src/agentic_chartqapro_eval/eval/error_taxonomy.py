@@ -122,10 +122,7 @@ def _call_vlm_gemini(prompt: str, image_path: str, model: str, api_key: Optional
     b64, mime = _encode_image(image_path)
     response = client.models.generate_content(
         model=model,
-        contents=[
-            genai.types.Part.from_bytes(data=b64, mime_type=f"image/{mime}"),
-            prompt
-        ],
+        contents=[genai.types.Part.from_bytes(data=b64, mime_type=f"image/{mime}"), prompt],
         config=genai.types.GenerateContentConfig(temperature=0, max_output_tokens=256),
     )
     return response.text or ""
