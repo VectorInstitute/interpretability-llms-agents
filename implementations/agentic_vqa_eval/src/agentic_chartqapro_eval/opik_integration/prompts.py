@@ -5,7 +5,7 @@ Usage:
     text = get_prompt("planner_prompt", PLANNER_PROMPT_PATH)
 
     # Push current prompt files to Opik (run once before a new experiment)
-    python -m agentic_chartqapro_eval.opik_integration.prompts
+    uv run --env-file .env -m agentic_chartqapro_eval.opik_integration.prompts
 """
 
 import argparse

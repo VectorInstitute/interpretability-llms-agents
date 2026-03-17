@@ -1,7 +1,7 @@
 r"""Pass 1: output-based evaluation — rule-based accuracy + LLM judge rubric.
 
 Usage:
-    python -m agentic_chartqapro_eval.eval.eval_outputs \\
+    uv run --env-file .env -m agentic_chartqapro_eval.eval.eval_outputs \\
         --mep_dir meps/openai_gemini/chartqapro/test \\
         --out metrics.jsonl
 """

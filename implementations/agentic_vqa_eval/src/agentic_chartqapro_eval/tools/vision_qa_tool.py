@@ -13,10 +13,9 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, List, Optional, Type
 
-import google.generativeai as genai
 from crewai.tools import BaseTool
+from google import genai
 from openai import OpenAI
-from PIL import Image
 from pydantic import BaseModel, Field, PrivateAttr
 
 from ..opik_integration.tracing import close_span, open_llm_span
@@ -338,17 +337,18 @@ class VisionQATool(BaseTool):
         provider_meta : dict
             Metadata including finish reason.
         """
-        genai.configure(api_key=self.api_key or os.environ.get("GEMINI_API_KEY", ""))
-        gemini_model = genai.GenerativeModel(self.model)
+        client = genai.Client(api_key=self.api_key or os.environ.get("GEMINI_API_KEY", ""))
         prompt = self._build_prompt(question, plan_steps, choices, context)
-        image = Image.open(image_path)
+        b64, mime = self._encode_image(image_path)
 
-        response = gemini_model.generate_content(
-            [image, prompt],
-            generation_config=genai.types.GenerationConfig(
-                temperature=0,
-                max_output_tokens=1024,
-            ),
+
+        response = client.models.generate_content(
+            model=self.model,
+            contents=[
+                genai.types.Part.from_bytes(data=b64, mime_type=f"image/{mime}"),
+                prompt
+            ],
+            config=genai.types.GenerateContentConfig(temperature=0, max_output_tokens=1024),
         )
 
         raw_text = response.text or ""

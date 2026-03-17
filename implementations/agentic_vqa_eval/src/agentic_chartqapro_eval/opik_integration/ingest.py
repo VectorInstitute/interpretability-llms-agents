@@ -3,7 +3,7 @@
 This lets you visualise runs that completed before Opik was wired in.
 
 Usage:
-    python -m agentic_chartqapro_eval.opik_integration.ingest \
+    uv run --env-file .env -m agentic_chartqapro_eval.opik_integration.ingest \
         --mep_dir meps/openai_openai/chartqapro/test \
         [--metrics_file metrics.jsonl]
 """

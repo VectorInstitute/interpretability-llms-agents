@@ -11,12 +11,12 @@ import json
 import os
 import time
 from datetime import datetime, timezone
+from pathlib import Path
 from typing import Any, Optional, Type
 
-import google.generativeai as genai
 from crewai.tools import BaseTool
+from google import genai
 from openai import OpenAI
-from PIL import Image
 from pydantic import BaseModel, Field, PrivateAttr
 
 from ..opik_integration.tracing import close_span, open_llm_span
@@ -267,17 +267,17 @@ class OcrReaderTool(BaseTool):
         provider_meta : dict
             API metadata.
         """
-        genai.configure(api_key=self.api_key or os.environ.get("GEMINI_API_KEY", ""))
-        gemini_model = genai.GenerativeModel(self.model)
-        image = Image.open(image_path)
-
-        response = gemini_model.generate_content(
-            [image, _OCR_PROMPT],
-            generation_config=genai.types.GenerationConfig(
-                temperature=0,
-                max_output_tokens=512,
-            ),
+        client = genai.Client(api_key=self.api_key or os.environ.get("GEMINI_API_KEY", ""))
+        b64, mime = self._encode_image(image_path)
+        response = client.models.generate_content(
+            model=self.model,
+            contents=[
+                genai.types.Part.from_bytes(data=b64, mime_type=f"image/{mime}"),
+                _OCR_PROMPT
+            ],
+            config=genai.types.GenerateContentConfig(temperature=0, max_output_tokens=512),
         )
+
 
         raw_text = response.text or ""
         finish = str(response.candidates[0].finish_reason) if response.candidates else "unknown"

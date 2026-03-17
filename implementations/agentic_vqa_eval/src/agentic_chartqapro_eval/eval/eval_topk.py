@@ -5,7 +5,7 @@ answers. Computes hit@1, hit@2, hit@3 without modifying any existing MEPs or
 metrics.
 
 Usage:
-    python -m agentic_chartqapro_eval.eval.eval_topk \
+    uv run --env-file .env -m agentic_chartqapro_eval.eval.eval_topk \
         --mep_dir meps/openai_openai/chartqapro/test \
         --out topk_metrics.jsonl \
         --backend openai \
@@ -20,10 +20,9 @@ import os
 from pathlib import Path
 from typing import List, Optional
 
-import google.generativeai as genai
 from dotenv import load_dotenv
+from google import genai
 from openai import OpenAI
-from PIL import Image
 
 from ..mep.writer import iter_meps
 from ..utils.json_strict import parse_strict
@@ -101,15 +100,15 @@ def _call_gemini_topk(
     model: str,
     api_key: Optional[str],
 ) -> str:
-    genai.configure(api_key=api_key or os.environ.get("GEMINI_API_KEY", ""))
-    m = genai.GenerativeModel(model)
-    image = Image.open(image_path)
-    resp = m.generate_content(
-        [image, prompt],
-        generation_config=genai.types.GenerationConfig(
-            temperature=0.3,
-            max_output_tokens=256,
-        ),
+    client = genai.Client(api_key=api_key or os.environ.get("GEMINI_API_KEY", ""))
+    b64, mime = _encode_image(image_path)
+    resp = client.models.generate_content(
+        model=model,
+        contents=[
+            genai.types.Part.from_bytes(data=b64, mime_type=f"image/{mime}"),
+            prompt
+        ],
+        config=genai.types.GenerateContentConfig(temperature=0.3, max_output_tokens=256),
     )
     return resp.text or ""
 

@@ -1,7 +1,7 @@
 r"""Runner: generate Model Evaluation Packets (MEPs) for ChartQAPro.
 
 Usage:
-    python -m agentic_chartqapro_eval.runner.run_generate_meps \\
+    uv run --env-file .env -m agentic_chartqapro_eval.runner.run_generate_meps \\
         --dataset chartqapro \\
         --split test \\
         --n 200 \\

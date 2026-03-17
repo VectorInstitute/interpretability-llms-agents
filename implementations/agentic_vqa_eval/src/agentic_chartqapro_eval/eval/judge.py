@@ -6,7 +6,7 @@ Scores five rubric dimensions (0.0–1.0) using a text LLM.
 import os
 from typing import Optional
 
-import google.generativeai as genai
+from google import genai
 from openai import OpenAI
 
 from ..utils.json_strict import parse_strict
@@ -94,9 +94,9 @@ def _call_llm(prompt: str, backend: str, model: str, api_key: Optional[str]) -> 
         return resp.choices[0].message.content or ""
 
     if backend == "gemini":
-        genai.configure(api_key=api_key or os.environ.get("GEMINI_API_KEY", ""))
-        m = genai.GenerativeModel(model)
-        return m.generate_content(prompt).text or ""
+        client = genai.Client(api_key=api_key or os.environ.get("GEMINI_API_KEY", ""))
+        resp = client.models.generate_content(model, content=prompt)
+        return resp.text or ""
 
     raise ValueError(f"Unknown judge backend: {backend!r}")
 

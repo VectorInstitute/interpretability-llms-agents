@@ -19,7 +19,7 @@ import os
 from pathlib import Path
 from typing import Any, Optional, Tuple
 
-import google.generativeai as genai
+from google import genai
 from openai import OpenAI
 from PIL import Image
 
@@ -153,12 +153,12 @@ def _call_vlm_gemini(prompt: str, image_path: str, model: str, api_key: Optional
     str
         The text response from the Gemini model.
     """
-    genai.configure(api_key=api_key or os.environ.get("GEMINI_API_KEY", ""))
-    gemini_model = genai.GenerativeModel(model)
+    client = genai.Client(api_key=api_key or os.environ.get("GEMINI_API_KEY", ""))
     image = Image.open(image_path)
-    response = gemini_model.generate_content(
-        [image, prompt],
-        generation_config=genai.types.GenerationConfig(temperature=0, max_output_tokens=256),
+    response = client.models.generate_content(
+        model=model,
+        contents=[image, prompt],
+        config=genai.types.GenerateContentConfig(temperature=0, max_output_tokens=256),
     )
     return response.text or ""
 

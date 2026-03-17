@@ -1,7 +1,7 @@
 r"""Aggregate metrics.jsonl → summary.csv, grouped by config_name and question_type.
 
 Usage:
-    python -m agentic_chartqapro_eval.eval.summarize \\
+    uv run --env-file .env -m agentic_chartqapro_eval.eval.summarize \\
         --metrics metrics.jsonl \\
         --out summary.csv
 """

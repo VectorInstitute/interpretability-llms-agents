@@ -5,7 +5,7 @@ chart image AND the agent's wrong answer so it can make a grounded, visual
 diagnosis of the failure mode.
 
 Usage:
-    python -m agentic_chartqapro_eval.eval.error_taxonomy \\
+    uv run --env-file .env -m agentic_chartqapro_eval.eval.error_taxonomy \\
         --mep_dir meps/openai_openai/chartqapro/test \\
         --metrics_file metrics.jsonl \\
         --out taxonomy.jsonl
@@ -19,10 +19,9 @@ import os
 from pathlib import Path
 from typing import Optional
 
-import google.generativeai as genai
 from dotenv import load_dotenv
+from google import genai
 from openai import OpenAI
-from PIL import Image
 
 from ..mep.writer import iter_meps
 from ..opik_integration.client import get_client
@@ -119,12 +118,15 @@ def _call_vlm_openai(prompt: str, image_path: str, model: str, api_key: Optional
 
 
 def _call_vlm_gemini(prompt: str, image_path: str, model: str, api_key: Optional[str]) -> str:
-    genai.configure(api_key=api_key or os.environ.get("GEMINI_API_KEY", ""))
-    gemini_model = genai.GenerativeModel(model)
-    image = Image.open(image_path)
-    response = gemini_model.generate_content(
-        [image, prompt],
-        generation_config=genai.types.GenerationConfig(temperature=0, max_output_tokens=256),
+    client = genai.Client(api_key=api_key or os.environ.get("GEMINI_API_KEY", ""))
+    b64, mime = _encode_image(image_path)
+    response = client.models.generate_content(
+        model=model,
+        contents=[
+            genai.types.Part.from_bytes(data=b64, mime_type=f"image/{mime}"),
+            prompt
+        ],
+        config=genai.types.GenerateContentConfig(temperature=0, max_output_tokens=256),
     )
     return response.text or ""
 

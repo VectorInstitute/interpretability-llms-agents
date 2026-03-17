@@ -4,7 +4,7 @@ Reads metrics.jsonl (required) plus taxonomy.jsonl (optional) and writes a
 single portable HTML file — no external dependencies, no JavaScript required.
 
 Usage:
-    python -m agentic_chartqapro_eval.eval.report \\
+    uv run --env-file .env -m agentic_chartqapro_eval.eval.report \\
         --metrics metrics.jsonl \\
         --taxonomy taxonomy.jsonl \\
         --out report.html

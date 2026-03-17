@@ -1,7 +1,7 @@
 """Register ChartQAPro samples as an Opik Dataset.
 
 Usage:
-    python -m agentic_chartqapro_eval.opik_integration.dataset \
+    uv run --env-file .env -m agentic_chartqapro_eval.opik_integration.dataset \
         --split test --n 25
 """
 
