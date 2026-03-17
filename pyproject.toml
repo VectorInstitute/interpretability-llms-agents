@@ -34,7 +34,7 @@ agentic-xai-eval = [
     "streamlit>=1.55.0",
 ]
 dev = [
-    "aieng-platform-onboard>=0.6.2",
+    "aieng-platform-onboard>=0.6.3",
     "codecov>=2.1.13",
     "nbqa>=1.9.1",
     "pip-audit>=2.10.0",
