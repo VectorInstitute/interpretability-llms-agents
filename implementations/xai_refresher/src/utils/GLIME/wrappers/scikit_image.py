@@ -1,11 +1,11 @@
 import types
+
 from lime.utils.generic_utils import has_arg
-from skimage.segmentation import felzenszwalb, slic, quickshift
+from skimage.segmentation import felzenszwalb, quickshift, slic
 
 
 class BaseWrapper(object):
     """Base class for LIME Scikit-Image wrapper
-
 
     Args:
         target_fn: callable function or class instance
@@ -30,16 +30,19 @@ class BaseWrapper(object):
             ValueError: if any parameter is not a valid argument for the target function
                 or the target function is not defined
             TypeError: if argument parameters is not iterable
-         """
+        """
         a_valid_fn = []
         if self.target_fn is None:
             if callable(self):
                 a_valid_fn.append(self.__call__)
             else:
-                raise TypeError('invalid argument: tested object is not callable,\
-                 please provide a valid target_fn')
-        elif isinstance(self.target_fn, types.FunctionType) \
-                or isinstance(self.target_fn, types.MethodType):
+                raise TypeError(
+                    "invalid argument: tested object is not callable,\
+                 please provide a valid target_fn"
+                )
+        elif isinstance(self.target_fn, types.FunctionType) or isinstance(
+            self.target_fn, types.MethodType
+        ):
             a_valid_fn.append(self.target_fn)
         else:
             a_valid_fn.append(self.target_fn.__call__)
@@ -50,9 +53,9 @@ class BaseWrapper(object):
                     if has_arg(fn, p):
                         pass
                     else:
-                        raise ValueError('{} is not a valid parameter'.format(p))
+                        raise ValueError("{} is not a valid parameter".format(p))
         else:
-            raise TypeError('invalid argument: list or dictionnary expected')
+            raise TypeError("invalid argument: list or dictionnary expected")
 
     def set_params(self, **params):
         """Sets the parameters of this estimator.
@@ -85,27 +88,27 @@ class BaseWrapper(object):
 
 
 class SegmentationAlgorithm(BaseWrapper):
-    """ Define the image segmentation function based on Scikit-Image
-            implementation and a set of provided parameters
+    """Define the image segmentation function based on Scikit-Image
+        implementation and a set of provided parameters
 
-        Args:
-            algo_type: string, segmentation algorithm among the following:
-                'quickshift', 'slic', 'felzenszwalb'
-            target_params: dict, algorithm parameters (valid model paramters
-                as define in Scikit-Image documentation)
+    Args:
+        algo_type: string, segmentation algorithm among the following:
+            'quickshift', 'slic', 'felzenszwalb'
+        target_params: dict, algorithm parameters (valid model paramters
+            as define in Scikit-Image documentation)
     """
 
     def __init__(self, algo_type, **target_params):
         self.algo_type = algo_type
-        if (self.algo_type == 'quickshift'):
+        if self.algo_type == "quickshift":
             BaseWrapper.__init__(self, quickshift, **target_params)
             kwargs = self.filter_params(quickshift)
             self.set_params(**kwargs)
-        elif (self.algo_type == 'felzenszwalb'):
+        elif self.algo_type == "felzenszwalb":
             BaseWrapper.__init__(self, felzenszwalb, **target_params)
             kwargs = self.filter_params(felzenszwalb)
             self.set_params(**kwargs)
-        elif (self.algo_type == 'slic'):
+        elif self.algo_type == "slic":
             BaseWrapper.__init__(self, slic, **target_params)
             kwargs = self.filter_params(slic)
             self.set_params(**kwargs)

@@ -18,10 +18,9 @@ Examples of usage:
 # Importing necessary libraries
 import argparse  # For parsing command-line arguments
 import itertools
-import random
 from collections.abc import Generator
 from pathlib import Path  # For working with file paths
-from typing import Any, Iterator, Optional
+from typing import Any
 
 import pandas as pd  # For data manipulation and analysis
 from datasets import (  # For loading datasets from Hugging Face
@@ -54,8 +53,8 @@ def load_civil(
 ) -> pd.DataFrame:
     """Load the CivilComments dataset."""
     ds = load_dataset(
-        "google/civil_comments", 
-        split=split, 
+        "google/civil_comments",
+        split=split,
         streaming=stream,
     )
     cols_keep = [
@@ -73,7 +72,7 @@ def load_civil(
                 "When using --stream, you must specify --take to limit the number of rows. "
                 "Example: --stream --take 200000"
             )
-    
+
         it_gen: Generator[dict[str, Any], None, None] = (
             {
                 "comment_text": r.get("text", ""),
@@ -86,7 +85,7 @@ def load_civil(
             }
             for r in ds
         )
-    
+
         it = list(itertools.islice(it_gen, take))
         return pd.DataFrame(it)
     # Remove unwanted columns and rename for consistency

@@ -1,17 +1,16 @@
 import os
 
 import torch
-
 from analysis import analyse_features
 from helpers.arguments import get_arguments
 from helpers.logger import log_args, setup_logger
 from models import get_model_class
 
-if __name__ == "__main__":
 
+if __name__ == "__main__":
     args = get_arguments()
 
-    logger = setup_logger(log_file=os.path.join(args.save_dir, f"logs.log"))
+    logger = setup_logger(log_file=os.path.join(args.save_dir, "logs.log"))
     log_args(args, logger)
 
     device = torch.device("cpu")

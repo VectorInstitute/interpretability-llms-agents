@@ -2,11 +2,11 @@ import argparse
 import os
 from typing import Any, Callable, Dict, List
 
+import helpers.utils as helpers_utils
 import torch
+from metrics.utils import GIST_FILE_PATH, get_stopwords, valid_word
 from nltk.corpus import words
 
-import helpers.utils as helpers_utils
-from metrics.utils import GIST_FILE_PATH, get_stopwords, valid_word
 
 __all__ = [
     "get_multimodal_grounding",
@@ -32,9 +32,9 @@ def concept_text_grounding(
     num_concepts = concepts.shape[0]
 
     token_logits = lm_head(concepts.float())
-    assert (
-        pre_num_top_tokens > num_top_tokens
-    ), f"pre_num_top_tokens {pre_num_top_tokens} <= num_top_tokens {num_top_tokens}"
+    assert pre_num_top_tokens > num_top_tokens, (
+        f"pre_num_top_tokens {pre_num_top_tokens} <= num_top_tokens {num_top_tokens}"
+    )
     top_token_idx = token_logits.argsort(dim=-1, descending=True)[
         :, :pre_num_top_tokens
     ]
@@ -56,7 +56,6 @@ def concept_image_grounding(
     activations: torch.Tensor,
     num_images_per_concept: int = 5,
 ) -> torch.Tensor:
-
     local_image_indices = torch.argsort(activations, dim=0, descending=True)[
         :num_images_per_concept
     ].T  # After transpose shape (num_concepts, num_images_per_concept)
@@ -98,7 +97,7 @@ def get_multimodal_grounding(
         if logger is not None:
             logger.info(f"Lm head top_tokens: {top_tokens}, top words: {top_words}")
             logger.info("Lm head only for analysis. Function returning")
-        return
+        return None
 
     if text_grounding:
         grounded_words = concept_text_grounding(
@@ -124,7 +123,7 @@ def get_multimodal_grounding(
         logger.info(f"Image paths length: {len(image_paths)}")
         # Only keep image paths for samples with token_of_interest_mask True
 
-        token_of_interest_mask = metadata.get("token_of_interest_mask", None)
+        token_of_interest_mask = metadata.get("token_of_interest_mask")
         if token_of_interest_mask is not None:
             image_paths = [
                 image_paths[i]
@@ -147,10 +146,9 @@ def get_multimodal_grounding(
     grounding_dict["activations"] = activations
 
     if save_analysis:
-
-        assert (
-            save_name is not None
-        ), "save_name should not be None when save_analysis is set to True."
+        assert save_name is not None, (
+            "save_name should not be None when save_analysis is set to True."
+        )
         analysis_saving_name = (
             f"decompose_activations_{args.decomposition_method}_{save_name}"
         )

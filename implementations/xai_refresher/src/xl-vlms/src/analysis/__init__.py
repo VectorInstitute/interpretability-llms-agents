@@ -2,15 +2,19 @@ import argparse
 import os
 from typing import Any, Callable, Dict, List, Union
 
-import torch
-
 import metrics
+import torch
 from analysis.cluster_analysis import analyse_clusters
-from analysis.feature_decomposition import (decompose_and_ground_activations,
-                                            get_feature_matrix)
+from analysis.feature_decomposition import (
+    decompose_and_ground_activations,
+    get_feature_matrix,
+)
 from analysis.model_steering import get_steering_vector
-from analysis.utils import (get_matched_token_of_interest_mask,
-                            get_token_of_interest_features)
+from analysis.utils import (
+    get_matched_token_of_interest_mask,
+    get_token_of_interest_features,
+)
+
 
 __all__ = ["load_features", "analyse_features"]
 
@@ -27,8 +31,7 @@ def load_features(
     feature_key: str = "hidden_states",
     args: argparse.Namespace = None,
     keep_only_token_of_interest: bool = True,
-) -> List[Dict[str, Any]]:  #
-
+) -> List[Dict[str, Any]]:
     if isinstance(features_path, str):
         features_path = [features_path]
     features = {}
@@ -52,7 +55,7 @@ def load_features(
         if keep_only_token_of_interest:
             if token_of_interest_mask is None:
                 feat = get_token_of_interest_features(
-                    feat, meta.get("token_of_interest_mask", None)
+                    feat, meta.get("token_of_interest_mask")
                 )
             else:
                 feat = get_token_of_interest_features(feat, token_of_interest_mask)
@@ -95,7 +98,6 @@ def analyse_features(
     args: argparse.Namespace = None,
     **kwargs: Any,
 ) -> None:
-
     if args.features_path is not None:
         features, metadata = load_features(
             features_path=args.features_path,
@@ -105,7 +107,9 @@ def analyse_features(
     else:
         assert (args.origin_model_feature_path is not None) and (
             args.dest_model_feature_path is not None
-        ), "features_path and base_features_key should be provided when analyzing features from a single model"
+        ), (
+            "features_path and base_features_key should be provided when analyzing features from a single model"
+        )
 
         features, metadatas = load_features(
             features_path=[
@@ -150,7 +154,6 @@ def analyse_features(
         )
 
     elif "analyse_clusters" in analysis_name:
-
         # Load analysis data for origin model if the path is provided, else pass None
         if args.origin_model_analysis_path:
             analysis_data_original, meta_data_original_analysis = load_analysis(

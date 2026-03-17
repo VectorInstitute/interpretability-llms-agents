@@ -5,15 +5,14 @@ from transformers import AutoProcessor, LlavaForConditionalGeneration
 
 from .image_text_model import ImageTextModel
 
+
 __all__ = ["LLaVA"]
 
 
 class LLaVA(ImageTextModel):
-
     def set_model(
         self,
     ) -> None:
-
         self.model_ = LlavaForConditionalGeneration.from_pretrained(
             self.model_name_or_path,
             torch_dtype=torch.float16,
@@ -24,19 +23,16 @@ class LLaVA(ImageTextModel):
     def get_language_model(
         self,
     ) -> Callable:
-
         return self.model_.model
 
     def get_lm_head(
         self,
     ) -> Callable:
-
         return self.model_.lm_head
 
     def set_processor(
         self,
     ) -> None:
-
         self.processor_ = AutoProcessor.from_pretrained(
             self.processor_name, local_files_only=self.local_files_only
         )
@@ -45,13 +41,11 @@ class LLaVA(ImageTextModel):
     def set_preprocessor(
         self,
     ) -> None:
-
         self.preprocessor_ = self.preprocess_input
 
     def get_conversation_round(
         self, instruction: str = "What are these?", response: str = ""
     ) -> List[Dict[str, Any]]:
-
         conversation = [
             {
                 "role": "user",
@@ -80,7 +74,6 @@ class LLaVA(ImageTextModel):
         generation_mode: bool = False,
         **kwargs: Any,
     ) -> str:
-
         conversation = self.get_conversation_round(
             instruction=instruction, response=response
         )

@@ -1,12 +1,13 @@
 # dpo_helpers.py
-import os
 import json
 import random
 import re
+
 import numpy as np
-from datasets import Dataset
+
 
 random.seed(2021)
+
 
 def safe_json_loads(s):
     try:
@@ -20,11 +21,11 @@ def evaluate(output_str):
     Parse model outputs to extract better_answer = 1 or 2.
     Robust to malformed JSON.
     """
-    output_str = output_str.strip().replace('”,', '",').replace('”', '"')
+    output_str = output_str.strip().replace("”,", '",').replace("”", '"')
 
     # Case 1: fenced JSON
     if "```json" in output_str:
-        match = re.search(r'```json(.*?)```', output_str, re.DOTALL)
+        match = re.search(r"```json(.*?)```", output_str, re.DOTALL)
         if match:
             data = safe_json_loads(match.group(1))
             if data:
@@ -38,7 +39,7 @@ def evaluate(output_str):
 
     # Case 3: embedded JSON
     if "{" in output_str and "}" in output_str:
-        match = re.search(r'{(.*?)}', output_str, re.DOTALL)
+        match = re.search(r"{(.*?)}", output_str, re.DOTALL)
         if match:
             data = safe_json_loads("{" + match.group(1) + "}")
             if data:
@@ -50,6 +51,7 @@ def evaluate(output_str):
         return int(match.group(1))
 
     return None
+
 
 def load_jsonl(path):
     with open(path, "r", encoding="utf-8") as f:
@@ -92,6 +94,7 @@ def split_positive_negative(dataset):
     print(f"Unknown rate: {np.mean(none_rate) if none_rate else 0:.3f}")
     return grouped
 
+
 def construct_dpo_pairs(guide_split, guide_rev_split, output_split):
     pairs = {
         "conversations": [],
@@ -120,7 +123,9 @@ def construct_dpo_pairs(guide_split, guide_rev_split, output_split):
         # Best-of-N
         if pos and neg:
             for i in range(min(len(pos), len(neg), 3)):
-                pairs["conversations"].append([{"from": "human", "value": pos[i]["prompt"]}])
+                pairs["conversations"].append(
+                    [{"from": "human", "value": pos[i]["prompt"]}]
+                )
                 pairs["chosen"].append(pos[i]["gen"])
                 pairs["rejected"].append(neg[i]["gen"])
                 pairs["pair_type"].append("best_of_n")
@@ -130,7 +135,9 @@ def construct_dpo_pairs(guide_split, guide_rev_split, output_split):
                 stats["best_of_n"] += 1
 
         elif pos and unk:
-            pairs["conversations"].append([{"from": "human", "value": pos[0]["prompt"]}])
+            pairs["conversations"].append(
+                [{"from": "human", "value": pos[0]["prompt"]}]
+            )
             pairs["chosen"].append(pos[0]["gen"])
             pairs["rejected"].append(unk[0]["gen"])
             pairs["pair_type"].append("best_of_n_positive2unknown")
@@ -145,7 +152,9 @@ def construct_dpo_pairs(guide_split, guide_rev_split, output_split):
             g_rev_neg = guide_rev_split[test_id]["negative"]
 
             if g_pos and g_rev_neg:
-                pairs["conversations"].append([{"from": "human", "value": g_pos[0]["prompt"]}])
+                pairs["conversations"].append(
+                    [{"from": "human", "value": g_pos[0]["prompt"]}]
+                )
                 pairs["chosen"].append(g_pos[0]["gen"])
                 pairs["rejected"].append(g_rev_neg[0]["gen"])
                 pairs["pair_type"].append("preamble")
@@ -155,7 +164,9 @@ def construct_dpo_pairs(guide_split, guide_rev_split, output_split):
                 stats["preamble"] += 1
 
             elif g_pos and guide_rev_split[test_id]["unknown"]:
-                pairs["conversations"].append([{"from": "human", "value": g_pos[0]["prompt"]}])
+                pairs["conversations"].append(
+                    [{"from": "human", "value": g_pos[0]["prompt"]}]
+                )
                 pairs["chosen"].append(g_pos[0]["gen"])
                 pairs["rejected"].append(guide_rev_split[test_id]["unknown"][0]["gen"])
                 pairs["pair_type"].append("preamble2unknown")

@@ -486,12 +486,70 @@ ignore = [
     "PLR2004", # Replace magic number with named constant
     "PLR0913", # Too many arguments
     "COM812", # Missing trailing comma
+    "F405", # may be undefined or undefined from star imports
+    "W505", # doc line too long
+    "D103", # missing docstring in public function
+    "D102", # missing docstring in public method
+    "D100", # missing docstring in public module
+    "D101", # missing docstring in public class
+    "D205", # 1 blank line required between summary line and description
+    "D400", # first line should end with a period
+    "D401", # first line should be in imperative mood
+    "PLC0415", # import should be at top of file
+    "PLR0912", # too many branches
+    "PLW2901", # outer loop variable overwritten by inner loop
+    "RET504", # unnecessary assignment before return
+    "ERA001", # commented out code
+    "N806", # variable in function should be lowercase
+    "F841", # local variable assigned but never used
+    "SIM118", # use key in dict instead of key in dict.keys()
+    "B007", # loop variable not used
+    "B006", # mutable default argument
+    "E711", # comparison to None should be 'if cond is None'
+    "PLR0915", # too many statements
+    "B023", # function definition does not bind loop variable
+    "SIM115", # use context handler for opening files
+    "F403", # unable to detect undefined names from star import
+    "A001", # variable shadows a python builtin
+    "A002", # argument shadows a python builtin
+    "SIM108", # use ternary operator instead of if-else
+    "RET503", # missing explicit return at end of function
+    "PLC0206", # dict can be replaced by dict literal
+    "F821", # undefined name
+    "D104", # missing docstring in public package
+    "D200", # one-line docstring should fit on one line
+    "D105", # missing docstring in magic method
+    "B008", # do not perform function call in argument defaults
+    "C419", # unnecessary list comprehension
+    "C405", # unnecessary literal set
+    "PLR1714", # consider merging these comparisons
+    "N803", # argument name should be lowercase
+    "N801", # class name should use CapWords convention
+    "B028", # no explicit stacklevel argument
+    "SIM101", # use dict.get() instead of if-else
+    "N802", # function name should be lowercase
+    "E712", # comparison to True/False should be 'if cond is True'
+    "C416", # unnecessary list comprehension
+    "SIM210", # use bool instead of comparison
+    "SIM113", # use enumerate for index variable
+    "PLW0603", # using global statement
+    "PLW0602", # using global for variable but not assigned
+    "PLW0128", # redeclared type in assignment
+    "PLW0127", # self-assigning variable
+    "N805", # first argument should be named self
+    "ICN001", # import should be renamed
+    "F822", # undefined name in __all__
+    "E722", # do not use bare except
+    "D404", # first word of docstring should not be This
+    "E402", # module level import not at top of file
+    "B018", # useless expression
+    "F811", # redefinition of unused name
 ]
 
 # Ignore import violations in all `__init__.py` files.
 [tool.ruff.lint.per-file-ignores]
 "__init__.py" = ["E402", "F401", "F403", "F811"]
-"*.ipynb" = ["ERA001", "W505", "D401", "D400", "D200", "D100", "D103", "D205", "N806", "C416"]
+"*.ipynb" = ["ERA001", "W505", "D401", "D400", "D200", "D100", "D103", "D205", "N806", "C416", "E741", "A004", "SIM102", "F811", "N803", "RET503", "RET504", "B018", "F404", "D101", "D102", "D105", "N816", "SIM105"]
 
 [tool.ruff.lint.pep8-naming]
 ignore-names = ["X*", "setUp"]

@@ -73,7 +73,6 @@ def load_llm(
     model = (
         AutoModelForCausalLM.from_pretrained(
             model_name,
-            # dtype=load_dtype,  # <- use dtype (not deprecated torch_dtype)
             torch_dtype=load_dtype,
             low_cpu_mem_usage=True,
         )
@@ -95,6 +94,7 @@ def format_prompt(text: str, task: str) -> str:
         "offense": "Decide if the text is offensive or not offensive. Answer with a single word.\nText: ",
     }[task]
     return f"{instruction}{text}\nLabel:"
+
 
 @torch.no_grad()  # type: ignore[misc]
 def label_logprob(
@@ -126,7 +126,6 @@ def label_logprob(
     return float(logp)
 
 
-
 def score_and_predict(model: Any, tok: Any, text: str, task: str) -> dict[str, Any]:
     """Score text and predict label using log probability difference."""
     # Score = log p(pos_label) - log p(neg_label); sign => prediction
@@ -152,7 +151,6 @@ def integrated_gradients(
     model: Any, tok: Any, text: str, task: str, steps: int = 32
 ) -> tuple[list[str], npt.NDArray[np.floating[Any]], str]:
     """Compute IG for full multi-token label log-prob difference."""
-
     device = next(model.parameters()).device
     model_dtype = next(model.parameters()).dtype
 
@@ -170,8 +168,8 @@ def integrated_gradients(
     neg_ids = tok.encode(neg_label, add_special_tokens=False)
 
     def full_label_logprob(emb: torch.Tensor, label_ids: list[int]) -> torch.Tensor:
-        """
-        Compute log p(full_label | prompt) using teacher forcing.
+        """Compute log p(full_label | prompt) using teacher forcing.
+
         Only prompt embeddings get gradients.
         """
         cur_emb = emb
@@ -202,9 +200,9 @@ def integrated_gradients(
         return pos_score - neg_score
 
     # ----- Integrated Gradients -----
-    alphas = torch.linspace(
-        0, 1, steps=steps, device=device, dtype=model_dtype
-    ).view(-1, 1, 1, 1)
+    alphas = torch.linspace(0, 1, steps=steps, device=device, dtype=model_dtype).view(
+        -1, 1, 1, 1
+    )
 
     grads = torch.zeros_like(x)
 
@@ -222,9 +220,8 @@ def integrated_gradients(
 
     with torch.no_grad():
         explained_score = float(score_fn(x))
-        
-    return tokens, atts.cpu().numpy(), prompt, explained_score
 
+    return tokens, atts.cpu().numpy(), prompt, explained_score
 
 
 def save_heatmap(

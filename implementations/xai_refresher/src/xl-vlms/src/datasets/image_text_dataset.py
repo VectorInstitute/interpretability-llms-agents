@@ -3,10 +3,10 @@ import os
 from typing import Any, Callable, Dict, List
 
 import numpy as np
-from torch.utils.data import Dataset
-
 from datasets.constants import WORDS
 from models.constants import TASK_PROMPTS
+from torch.utils.data import Dataset
+
 
 __all__ = ["COCODataset"]
 
@@ -59,7 +59,6 @@ class ImageTextDataset(Dataset):
         return text
 
     def __getitem__(self, idx: int) -> Dict[str, Any]:
-
         item = self.data[idx]
         item["text"] = self.apply_prompt(item, mode=self.mode)
 
@@ -73,7 +72,6 @@ class ImageTextDataset(Dataset):
     def get_difference_variations_of_token_of_interest(
         self, token_of_interest: str
     ) -> List[str]:
-
         tokens_of_interest = set(
             [
                 token_of_interest,
@@ -110,7 +108,6 @@ class ImageTextDataset(Dataset):
         To extract the indices of samples where the TOI (token of interest) appears
         in their caption.
         """
-
         if token_of_interest_class is not None:
             token_of_interests = list(WORDS[token_of_interest_class])
         elif isinstance(token_of_interest, str):
@@ -152,11 +149,9 @@ class ImageTextDataset(Dataset):
         idx: int = 0,
         img_ids: List[str] = None,
     ) -> bool:
-
         return True if self.data[idx]["img_id"] in img_ids else False
 
     def indices_from_ids_extractor(self, img_ids: List[int] = None) -> List[int]:
-
         filtered_indices = []
 
         for idx in range(len(self)):
@@ -217,7 +212,6 @@ class VQAv2Dataset(ImageTextDataset):
     def create_dataset(
         self,
     ) -> None:
-
         annotations = json.load(
             open(os.path.join(self.data_dir, self.annotation_file))
         )["annotations"]
@@ -233,7 +227,6 @@ class VQAv2Dataset(ImageTextDataset):
 
         data = []
         for datum in annotations:
-
             img_id = datum["image_id"]
             image_name = f"COCO_{self.split}_{img_id:012d}.jpg"
             image_path = os.path.join(self.data_dir, self.split, image_name)

@@ -52,7 +52,9 @@ class AVRAG:
         }
 
     @torch.no_grad()
-    def encode(self, input_paths, data_type, cache=False, save_cache=False, cache_path=None) -> dict:  # noqa: PLR0912
+    def encode(
+        self, input_paths, data_type, cache=False, save_cache=False, cache_path=None
+    ) -> dict:  # noqa: PLR0912
         """
         Encode input paths into embeddings using ImageBind.
 

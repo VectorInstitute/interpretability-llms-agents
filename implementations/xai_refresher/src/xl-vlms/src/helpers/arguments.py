@@ -1,6 +1,7 @@
 import argparse
 from typing import List
 
+
 __all__ = ["get_arguments"]
 
 

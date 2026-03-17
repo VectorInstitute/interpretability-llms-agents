@@ -5,10 +5,10 @@ from typing import Any, Callable, Dict, List, Tuple
 
 import numpy as np
 import torch
-from sklearn.cluster import KMeans
-
 from analysis.feature_decomposition import decompose_activations
 from analysis.utils import get_dict_of_top_k_items
+from sklearn.cluster import KMeans
+
 
 __all__ = ["get_steering_vector", "get_shift_vector_scores"]
 
@@ -29,12 +29,12 @@ def get_steering_vector(
     args: argparse.Namespace = None,
     **kwargs: Any,
 ) -> None:
-    assert (
-        len(features.values()) == 2
-    ), f"There is only {len(features.values())} features, 2 must be given."
-    assert (
-        base_features_key in features
-    ), f"{base_features_key} not found in features. Only got {features.keys()}"
+    assert len(features.values()) == 2, (
+        f"There is only {len(features.values())} features, 2 must be given."
+    )
+    assert base_features_key in features, (
+        f"{base_features_key} not found in features. Only got {features.keys()}"
+    )
 
     feat1 = features[base_features_key]
     other_features_key = [k for k in features if k != base_features_key][0]
@@ -67,8 +67,8 @@ def get_steering_vector(
                 for j in range(vector.shape[1]):
                     if i != j:
                         meta_data[f"steering_vector_concept_{i}_to_{j}"] = vector[i][j]
-            meta_data[f"steering_vector_shift_of_means"] = feat2.mean(0) - feat1.mean(0)
-            meta_data[f"steering_vector_mean_of_directions"] = vector.mean(0).mean(0)
+            meta_data["steering_vector_shift_of_means"] = feat2.mean(0) - feat1.mean(0)
+            meta_data["steering_vector_mean_of_directions"] = vector.mean(0).mean(0)
         else:
             vector = feat2.mean(0) - concepts.mean(0)
 
@@ -95,7 +95,6 @@ def get_shift_vector_scores(
     keep_first_word: bool = False,
     reference_dict: Dict[str, Any] = {},
 ) -> Tuple[List, int]:
-
     if score_key:
         answer_counts = results["answer_counts"][score_key]
         ref_dict = reference_dict.get("answer_counts", {}).get(score_key, {})
@@ -165,7 +164,6 @@ def get_topk_shift_vectors(
     unique_vectors: bool = True,
     keep_first_word: bool = False,
 ) -> Dict[str, Any]:
-
     reference_dict = json.load(open(reference_dict_path)) if reference_dict_path else {}
     all_scores = {}
     for i, results_path in enumerate(results_paths):

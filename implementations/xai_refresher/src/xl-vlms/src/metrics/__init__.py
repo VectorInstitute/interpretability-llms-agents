@@ -4,11 +4,13 @@ from functools import partial
 from typing import Any, Callable, Dict
 
 import torch
-
 from metrics.captioning_metrics import compute_captioning_metrics
 from metrics.dictionary_learning_metrics import (
-    compute_grounding_words_overlap, get_clip_score)
+    compute_grounding_words_overlap,
+    get_clip_score,
+)
 from metrics.vqa_accuracy import compute_vqav2_accuracy
+
 
 __all__ = ["get_metric"]
 

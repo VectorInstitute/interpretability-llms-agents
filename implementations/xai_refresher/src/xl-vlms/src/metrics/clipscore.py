@@ -17,8 +17,7 @@ import torch
 import tqdm
 from packaging import version
 from PIL import Image
-from torchvision.transforms import (CenterCrop, Compose, Normalize, Resize,
-                                    ToTensor)
+from torchvision.transforms import CenterCrop, Compose, Normalize, Resize, ToTensor
 
 
 class CLIPCaptionDataset(torch.utils.data.Dataset):
@@ -98,7 +97,7 @@ def extract_image_features(images, model, device, batch_size=64):
 
 def get_clip_score(model, images, candidates, device, w=2.5):
     """
-    get standard image-text clipscore.
+    Get standard image-text clipscore.
     images can either be:
     - a list of strings specifying filepaths for images
     - a precomputed, ordered matrix of image features

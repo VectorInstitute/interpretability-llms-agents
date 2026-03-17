@@ -5,8 +5,8 @@ import statistics
 from typing import Any, Callable, Dict, List
 
 import torch
-
 from metrics.utils import get_number_predictions_with_token_of_interest
+
 
 __all__ = ["compute_vqav2_accuracy", "EvalAIAnswerProcessor"]
 
@@ -256,7 +256,6 @@ def update_count_dict(key: str, dictionary: Dict[str, Any]):
 
 
 def get_word_to_type_dict(type_to_answer_dict: Dict[str, Any]):
-
     words_to_type_count = {}
     for type_, words in type_to_answer_dict.items():
         for word in words:

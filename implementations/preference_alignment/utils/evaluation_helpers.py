@@ -1,15 +1,15 @@
 # llm_judge_helpers.py
-import re
 import json
-import torch
-import asyncio
+import re
 from asyncio import Semaphore
-from transformers import AutoTokenizer
+
+import torch
 from openai import AsyncOpenAI
+from transformers import AutoTokenizer
 
 
 def extract_qa(conv_text: str):
-    q  = re.search(r"Question:(.*?)(?:Answer 1:|$)", conv_text, re.DOTALL)
+    q = re.search(r"Question:(.*?)(?:Answer 1:|$)", conv_text, re.DOTALL)
     a1 = re.search(r"Answer 1:(.*?)(?:Answer 2:|$)", conv_text, re.DOTALL)
     a2 = re.search(r"Answer 2:(.*)", conv_text, re.DOTALL)
     return (
@@ -48,7 +48,7 @@ def run_local_inference(
         )
 
     decoded = tokenizer.decode(outputs[0], skip_special_tokens=True)
-    return decoded[len(prompt):].strip()
+    return decoded[len(prompt) :].strip()
 
 
 async def judge_with_openai(

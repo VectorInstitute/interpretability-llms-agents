@@ -1,8 +1,7 @@
 # dpo_training_helpers.py
 import torch
-from datasets import Dataset
+from trl import DPOConfig, DPOTrainer
 from unsloth import FastLanguageModel, PatchDPOTrainer
-from trl import DPOTrainer, DPOConfig
 
 
 def extract_prompt_from_conversations(convs):
@@ -43,7 +42,7 @@ def load_unsloth_model(
         max_seq_length=max_seq_length,
         load_in_4bit=True,
         dtype=None,
-        device_map=None,   # handled by Accelerate
+        device_map=None,  # handled by Accelerate
     )
 
     tokenizer.pad_token = tokenizer.eos_token
@@ -66,8 +65,13 @@ def apply_lora(model):
         bias="none",
         use_gradient_checkpointing=True,
         target_modules=[
-            "q_proj", "k_proj", "v_proj",
-            "o_proj", "gate_proj", "up_proj", "down_proj"
+            "q_proj",
+            "k_proj",
+            "v_proj",
+            "o_proj",
+            "gate_proj",
+            "up_proj",
+            "down_proj",
         ],
         random_state=3407,
     )
@@ -87,36 +91,27 @@ def build_dpo_trainer(
         output_dir=output_dir,
         beta=0.1,
         num_train_epochs=3,
-
         per_device_train_batch_size=2,
         per_device_eval_batch_size=2,
         gradient_accumulation_steps=16,
-
         learning_rate=1.8e-6,
         warmup_ratio=0.25,
         lr_scheduler_type="cosine",
-
         optim="paged_adamw_8bit",
         weight_decay=0.01,
         max_grad_norm=1.0,
-
         bf16=torch.cuda.is_bf16_supported(),
         fp16=not torch.cuda.is_bf16_supported(),
-
         max_length=max_seq_length,
         max_prompt_length=max_seq_length // 2,
         padding_value=tokenizer.pad_token_id,
-
         save_strategy="steps",
         save_steps=100,
         logging_steps=20,
         save_total_limit=3,
-
         dataloader_num_workers=2,
-
         remove_unused_columns=False,
         ddp_find_unused_parameters=False,
-
         report_to="none",
         resume_from_checkpoint=True,
         seed=3407,

@@ -34,10 +34,6 @@ def save_segmented_srt(entries, segment_length, video_id, output_dir, total_segm
     for seg_id in range(total_segments):
         seg_entries = segments[seg_id]
 
-        # if len(seg_entries) == 0:
-        #     # Skip writing empty files.
-        #     continue
-
         out_path = os.path.join(
             output_dir,
             f"{video_id}__{seg_id:03d}.srt",  # Format the output filename.
@@ -122,7 +118,6 @@ def split_video(video_dir, segment_dir, segment_length, max_files: int = None):
         segment_length (int)
         max_files (int, optional): number of videos to process
     """
-
     output_dir = segment_dir
     os.makedirs(output_dir, exist_ok=True)
 

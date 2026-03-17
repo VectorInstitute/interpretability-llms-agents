@@ -6,15 +6,14 @@ from transformers import AutoProcessor, Qwen2VLForConditionalGeneration
 
 from .image_text_model import ImageTextModel
 
+
 __all__ = ["QwenVL"]
 
 
 class QwenVL(ImageTextModel):
-
     def set_model(
         self,
     ) -> None:
-
         self.model_ = Qwen2VLForConditionalGeneration.from_pretrained(
             self.model_name_or_path,
             torch_dtype=torch.float16,
@@ -25,19 +24,16 @@ class QwenVL(ImageTextModel):
     def get_language_model(
         self,
     ) -> Callable:
-
         return self.model_.model
 
     def get_lm_head(
         self,
     ) -> Callable:
-
         return self.model_.lm_head
 
     def set_processor(
         self,
     ) -> None:
-
         self.processor_ = AutoProcessor.from_pretrained(
             self.processor_name,
             local_files_only=self.local_files_only,
@@ -47,7 +43,6 @@ class QwenVL(ImageTextModel):
     def set_preprocessor(
         self,
     ) -> None:
-
         self.preprocessor_ = self.preprocess_input
 
     def get_conversation_round(
@@ -56,7 +51,6 @@ class QwenVL(ImageTextModel):
         response: str = "",
         image_file: str = "",
     ) -> List[Dict[str, Any]]:
-
         conversation = [
             {
                 "role": "user",
@@ -88,7 +82,6 @@ class QwenVL(ImageTextModel):
         image_file: str = "",
         **kwargs: Any,
     ) -> Dict[str, Any]:
-
         conversation = self.get_conversation_round(
             instruction=instruction,
             response=response,
@@ -102,7 +95,6 @@ class QwenVL(ImageTextModel):
         generation_mode: bool = False,
         **kwargs: Any,
     ) -> str:
-
         prompt = self.processor_.apply_chat_template(
             conversation,
             add_generation_prompt=generation_mode,
@@ -116,7 +108,6 @@ class QwenVL(ImageTextModel):
         conversation,
         **kwargs: Any,
     ) -> List:
-
         image_inputs, video_inputs = process_vision_info(conversation)
 
         return image_inputs, video_inputs
@@ -129,7 +120,6 @@ class QwenVL(ImageTextModel):
         generation_mode: bool = False,
         **kwargs: Any,
     ) -> Dict[str, Any]:
-
         conversation = self.get_conversation_template(
             instruction=instruction,
             response=response,
