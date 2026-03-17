@@ -175,17 +175,17 @@ Once formatted properly, the rest of the pipeline (LLM-as-a-Judge → DPO → Ev
 
 ## Environment Setup
 
-From the **root of the repository**, install the `ref4-llm-alignment-ethics` dependency group using `uv`:
+From the **root of the repository**, install the `preference-alignment` dependency group using `uv`:
 
 ```bash
-uv sync --group ref4-llm-alignment-ethics
+uv sync --group preference-alignment
 source .venv/bin/activate
 ```
 
 > **CUDA note:** `torch==2.6.0` from PyPI includes CUDA support on Linux. If you specifically need the CUDA 12.4 build, run:
 >
 > ```bash
-> uv sync --group ref4-llm-alignment-ethics \
+> uv sync --group preference-alignment \
 >   --index-url https://download.pytorch.org/whl/cu124
 > ```
 

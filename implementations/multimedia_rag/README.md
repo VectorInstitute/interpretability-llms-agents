@@ -106,7 +106,7 @@ Used for:
 From the **root of the repository**:
 
 ```bash
-uv sync --group ref5-multimedia-rag-vlm
+uv sync --group multimedia-rag
 source .venv/bin/activate
 ```
 
@@ -122,7 +122,7 @@ Used for:
 From the **root of the repository**:
 
 ```bash
-uv sync --group ref5-multimedia-rag-vlm-qa
+uv sync --group multimedia-rag
 source .venv/bin/activate
 ```
 

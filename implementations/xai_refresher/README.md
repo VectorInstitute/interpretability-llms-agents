@@ -71,10 +71,10 @@ For further reading on the methods covered in this module:
 ## Getting Started
 
 1. From the **root of the repository**, create a virtual environment and install the
-   `ref1-refresher-interpretability` dependency group using `uv`:
+   `xai-refresher` dependency group using `uv`:
 
    ```bash
-   uv sync --group ref1-refresher-interpretability
+   uv sync --group xai-refresher
    ```
 
    This creates a `.venv` in the repo root and installs all packages needed for this module
