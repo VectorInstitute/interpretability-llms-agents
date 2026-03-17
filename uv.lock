@@ -62,13 +62,13 @@ resolution-markers = [
     "(python_full_version < '3.12' and platform_machine != 'aarch64' and sys_platform == 'linux') or (python_full_version < '3.12' and sys_platform != 'darwin' and sys_platform != 'emscripten' and sys_platform != 'linux' and sys_platform != 'win32')",
 ]
 dependencies = [
-    { name = "huggingface-hub", version = "0.36.2", source = { registry = "https://pypi.org/simple" } },
-    { name = "numpy" },
-    { name = "packaging" },
-    { name = "psutil" },
-    { name = "pyyaml" },
-    { name = "safetensors" },
-    { name = "torch", version = "2.3.1", source = { registry = "https://pypi.org/simple" } },
+    { name = "huggingface-hub", version = "0.36.2", source = { registry = "https://pypi.org/simple" }, marker = "extra == 'group-28-interpretability-llms-agents-xai-refresher'" },
+    { name = "numpy", marker = "extra == 'group-28-interpretability-llms-agents-xai-refresher'" },
+    { name = "packaging", marker = "extra == 'group-28-interpretability-llms-agents-xai-refresher'" },
+    { name = "psutil", marker = "extra == 'group-28-interpretability-llms-agents-xai-refresher'" },
+    { name = "pyyaml", marker = "extra == 'group-28-interpretability-llms-agents-xai-refresher'" },
+    { name = "safetensors", marker = "extra == 'group-28-interpretability-llms-agents-xai-refresher'" },
+    { name = "torch", version = "2.3.1", source = { registry = "https://pypi.org/simple" }, marker = "extra == 'group-28-interpretability-llms-agents-xai-refresher'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/86/ff/338b8f0a4d93754b4e2a6fd5860bd9363660e0b148f69881a444a79b7f34/accelerate-0.29.3.tar.gz", hash = "sha256:1a5a845b06b24b41736b219b2b20fd021ca5dff4070a252445fd6de736e347ac", size = 295357, upload-time = "2024-04-17T15:42:34.975Z" }
 wheels = [
@@ -88,13 +88,13 @@ resolution-markers = [
     "python_full_version < '3.12' and sys_platform != 'emscripten' and sys_platform != 'win32'",
 ]
 dependencies = [
-    { name = "huggingface-hub", version = "1.7.1", source = { registry = "https://pypi.org/simple" } },
-    { name = "numpy" },
-    { name = "packaging" },
-    { name = "psutil" },
-    { name = "pyyaml" },
-    { name = "safetensors" },
-    { name = "torch", version = "2.10.0", source = { registry = "https://pypi.org/simple" } },
+    { name = "huggingface-hub", version = "1.7.1", source = { registry = "https://pypi.org/simple" }, marker = "extra == 'group-28-interpretability-llms-agents-preference-alignment' or extra != 'group-28-interpretability-llms-agents-xai-refresher'" },
+    { name = "numpy", marker = "extra == 'group-28-interpretability-llms-agents-preference-alignment' or extra != 'group-28-interpretability-llms-agents-xai-refresher'" },
+    { name = "packaging", marker = "extra == 'group-28-interpretability-llms-agents-preference-alignment' or extra != 'group-28-interpretability-llms-agents-xai-refresher'" },
+    { name = "psutil", marker = "extra == 'group-28-interpretability-llms-agents-preference-alignment' or extra != 'group-28-interpretability-llms-agents-xai-refresher'" },
+    { name = "pyyaml", marker = "extra == 'group-28-interpretability-llms-agents-preference-alignment' or extra != 'group-28-interpretability-llms-agents-xai-refresher'" },
+    { name = "safetensors", marker = "extra == 'group-28-interpretability-llms-agents-preference-alignment' or extra != 'group-28-interpretability-llms-agents-xai-refresher'" },
+    { name = "torch", version = "2.10.0", source = { registry = "https://pypi.org/simple" }, marker = "extra == 'group-28-interpretability-llms-agents-preference-alignment' or extra != 'group-28-interpretability-llms-agents-xai-refresher'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/ca/14/787e5498cd062640f0f3d92ef4ae4063174f76f9afd29d13fc52a319daae/accelerate-1.13.0.tar.gz", hash = "sha256:d631b4e0f5b3de4aff2d7e9e6857d164810dfc3237d54d017f075122d057b236", size = 402835, upload-time = "2026-03-04T19:34:12.359Z" }
 wheels = [
@@ -1972,11 +1972,14 @@ dev = [
     { name = "ruff" },
 ]
 multimedia-rag = [
+    { name = "accelerate", version = "0.29.3", source = { registry = "https://pypi.org/simple" }, marker = "extra == 'group-28-interpretability-llms-agents-xai-refresher'" },
+    { name = "accelerate", version = "1.13.0", source = { registry = "https://pypi.org/simple" }, marker = "extra == 'group-28-interpretability-llms-agents-preference-alignment' or extra != 'group-28-interpretability-llms-agents-xai-refresher'" },
     { name = "decord", marker = "sys_platform != 'darwin' or (extra == 'group-28-interpretability-llms-agents-preference-alignment' and extra == 'group-28-interpretability-llms-agents-xai-refresher')" },
     { name = "imagebind" },
     { name = "qwen-omni-utils" },
     { name = "torchaudio", version = "2.3.1", source = { registry = "https://pypi.org/simple" }, marker = "extra == 'group-28-interpretability-llms-agents-xai-refresher'" },
     { name = "torchaudio", version = "2.10.0", source = { registry = "https://pypi.org/simple" }, marker = "extra == 'group-28-interpretability-llms-agents-preference-alignment' or extra != 'group-28-interpretability-llms-agents-xai-refresher'" },
+    { name = "torchcodec" },
 ]
 preference-alignment = [
     { name = "jsonlines" },
@@ -2037,10 +2040,12 @@ dev = [
     { name = "ruff", specifier = ">=0.15.6" },
 ]
 multimedia-rag = [
+    { name = "accelerate", specifier = ">=0.29.3" },
     { name = "decord", marker = "sys_platform != 'darwin'", specifier = ">=0.6.0" },
     { name = "imagebind", git = "https://github.com/facebookresearch/ImageBind.git?rev=53680b02d7e37b19b124fa37bae4b6c98c38f5be" },
     { name = "qwen-omni-utils", specifier = ">=0.0.9" },
     { name = "torchaudio", specifier = ">=2.0.0" },
+    { name = "torchcodec", specifier = ">=0.10.0" },
 ]
 preference-alignment = [
     { name = "jsonlines", specifier = ">=4.0.0" },
@@ -6101,6 +6106,19 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/ea/3f/df620439a76ece170472d41438d11a1545d5db5dc9f1eaeab8c6e055a328/torchaudio-2.10.0-cp312-cp312-manylinux_2_28_aarch64.whl", hash = "sha256:42b148a0921a3721abd1f6ae098b1ec9f89703e555c4f7a0d44da87b8decbcb9", size = 391973, upload-time = "2026-01-21T16:28:39.732Z" },
     { url = "https://files.pythonhosted.org/packages/98/25/e55a30d7138f8fe56ed006df25b0a3c27681f0ec7bc9989e1778e6d559c3/torchaudio-2.10.0-cp312-cp312-manylinux_2_28_x86_64.whl", hash = "sha256:0e77b2956448d63790a99beed0b74ac8b8cd3a94dcdd9ad01974411078f46278", size = 1895234, upload-time = "2026-01-21T16:28:37.034Z" },
     { url = "https://files.pythonhosted.org/packages/be/a0/da53c7d20fac15f66f8838653b91162de1bf21fb40fee88cf839e4ef5174/torchaudio-2.10.0-cp312-cp312-win_amd64.whl", hash = "sha256:7f76a01ecebf1869e1f2c50a261f1cf07e5fccb24402b4e9bbb82d6725b9c7dd", size = 475470, upload-time = "2026-01-21T16:28:40.615Z" },
+]
+
+[[package]]
+name = "torchcodec"
+version = "0.10.0"
+source = { registry = "https://pypi.org/simple" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/1c/0d/51ab5cb4ba8eb60e3e39651a4d43be89a592cc193fe11feb6509509b0121/torchcodec-0.10.0-cp311-cp311-macosx_11_0_arm64.whl", hash = "sha256:3dde1ebd9677ec1587f1e45486b3d59bd3e41a0bf4fc9b3dc6880e64c421ad56", size = 3907950, upload-time = "2026-01-22T15:41:43.819Z" },
+    { url = "https://files.pythonhosted.org/packages/b9/c8/618bde55c1908583290883537326174e633a383a8337226ce0c7c6d70090/torchcodec-0.10.0-cp311-cp311-manylinux_2_28_x86_64.whl", hash = "sha256:2e2be11c4468a58940572fcf5f8ed5e41187c1de214267f692e2fd5ac8731198", size = 2070483, upload-time = "2026-01-22T15:41:36.743Z" },
+    { url = "https://files.pythonhosted.org/packages/74/f1/75d70391de0581069864b3c204bb7e463a2b3b32e840ff9d103688a6db94/torchcodec-0.10.0-cp311-cp311-win_amd64.whl", hash = "sha256:f51d9435d3c75c0b55f5dc64a22ce9cfb58ac19013cdd8ce572a523ef75e2b58", size = 2219702, upload-time = "2026-01-22T15:41:50.933Z" },
+    { url = "https://files.pythonhosted.org/packages/52/ff/2b27797e039673156710e5a0febe87cafc203722acafa3d34db283b40cf9/torchcodec-0.10.0-cp312-cp312-macosx_11_0_arm64.whl", hash = "sha256:b35fa4061c5757f8d714187c040a90a11669de6470a644bb04e3cd335ff1c110", size = 4073213, upload-time = "2026-01-22T15:41:45.485Z" },
+    { url = "https://files.pythonhosted.org/packages/29/34/ccc711b6dc581e43b8d8d227e4173a8826994ee7b68d6b3d82291f307325/torchcodec-0.10.0-cp312-cp312-manylinux_2_28_x86_64.whl", hash = "sha256:6e43184d83ccced965b31cad5bb6200c779646fee2ec153a6d784b4def40c91b", size = 2083121, upload-time = "2026-01-22T15:41:37.947Z" },
+    { url = "https://files.pythonhosted.org/packages/cf/6c/9af3bd945a610d6c757d898aa4624e0f5135cc8a6992d0a1d846f1084576/torchcodec-0.10.0-cp312-cp312-win_amd64.whl", hash = "sha256:e4f022fa53d91b414b4177fe87b0afc40a806092da4595d24de4b245d6fb0fba", size = 2225338, upload-time = "2026-01-22T15:41:52.094Z" },
 ]
 
 [[package]]

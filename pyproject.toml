@@ -1,7 +1,7 @@
 [project]
 name = "interpretability-llms-agents"
 version = "0.1.0"
-description = ""
+description = "Vector Institute Bootcamp on Interpretability for LLMs and Agents"
 authors = [ {name = "Vector AI Engineering", email = "ai_engineering@vectorinstitute.ai"} ]
 urls = {Repository = "https://github.com/VectorInstitute/interpretability-llms-agents"}
 readme = "README.md"
@@ -43,10 +43,12 @@ dev = [
     "ruff>=0.15.6",
 ]
 multimedia-rag = [
+    "accelerate>=0.29.3",
     "decord>=0.6.0; sys_platform != 'darwin'",
     "imagebind",
     "qwen-omni-utils>=0.0.9",
     "torchaudio>=2.0.0",
+    "torchcodec>=0.10.0",
 ]
 preference-alignment = [
     "jsonlines>=4.0.0",
