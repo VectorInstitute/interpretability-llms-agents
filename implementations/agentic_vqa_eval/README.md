@@ -242,10 +242,12 @@ The `.env` file lives at the **repo root**. `load_dotenv()` searches upward from
 
 ### 3. Generate MEPs (run the agentic pipeline)
 
+> **Note:** All `uv run` commands below use `$(git rev-parse --show-toplevel)` so they work from any directory in the repo — it resolves the repo root for `--env-file`, while `--directory` ensures outputs (`meps/`, `output/`) are written inside `implementations/agentic_vqa_eval/`.
+
 Run on 25 test samples using GPT-4o for planner, vision, and verifier:
 
 ```bash
-uv run --env-file .env -m agentic_chartqapro_eval.runner.run_generate_meps \
+uv run --env-file "$(git rev-parse --show-toplevel)/.env" --directory "$(git rev-parse --show-toplevel)/implementations/agentic_vqa_eval" -m agentic_chartqapro_eval.runner.run_generate_meps \
     --split test \
     --n 25 \
     --config gemini_gemini \
@@ -257,7 +259,7 @@ MEPs are written to `meps/gemini_gemini/chartqapro/test/<sample_id>.json`.
 
 The **VerifierAgent (Pass 2.5)** runs automatically after the VisionAgent on every sample. To skip it (faster, lower cost):
 ```bash
-uv run --env-file .env -m agentic_chartqapro_eval.runner.run_generate_meps \
+uv run --env-file "$(git rev-parse --show-toplevel)/.env" --directory "$(git rev-parse --show-toplevel)/implementations/agentic_vqa_eval" -m agentic_chartqapro_eval.runner.run_generate_meps \
     --split test --n 25 --config gemini_gemini --no_verifier
 ```
 
@@ -265,7 +267,7 @@ uv run --env-file .env -m agentic_chartqapro_eval.runner.run_generate_meps \
 
 **Model overrides** (e.g. to test different models without changing config):
 ```bash
-uv run --env-file .env -m agentic_chartqapro_eval.runner.run_generate_meps \
+uv run --env-file "$(git rev-parse --show-toplevel)/.env" --directory "$(git rev-parse --show-toplevel)/implementations/agentic_vqa_eval" -m agentic_chartqapro_eval.runner.run_generate_meps \
     --split test --n 25 --config gemini_gemini \
     --planner_model gemini-2.5-flash-lite \
     --vision_model gemini-2.5-flash-lite \
@@ -280,14 +282,14 @@ OCR is **enabled by default** and uses the same vision backend and model as the 
 
 To run with OCR using a cheaper model (recommended — OCR is simpler than full VQA):
 ```bash
-uv run --env-file .env -m agentic_chartqapro_eval.runner.run_generate_meps \
+uv run --env-file "$(git rev-parse --show-toplevel)/.env" --directory "$(git rev-parse --show-toplevel)/implementations/agentic_vqa_eval" -m agentic_chartqapro_eval.runner.run_generate_meps \
     --split test --n 25 --config gemini_gemini \
     --ocr_model gemini-2.5-flash-lite
 ```
 
 To disable OCR entirely (matches the original pipeline behaviour, faster and lower cost):
 ```bash
-uv run --env-file .env -magentic_chartqapro_eval.runner.run_generate_meps \
+uv run --env-file "$(git rev-parse --show-toplevel)/.env" --directory "$(git rev-parse --show-toplevel)/implementations/agentic_vqa_eval" -m agentic_chartqapro_eval.runner.run_generate_meps \
     --split test --n 25 --config gemini_gemini --no_ocr
 ```
 
@@ -298,7 +300,7 @@ When OCR is skipped, `"ocr": null` appears in the MEP and `"ocr_ms": 0.0` in tim
 ### 4. Evaluate outputs (Pass 1 — accuracy + judge)
 
 ```bash
-uv run --env-file .env -m agentic_chartqapro_eval.eval.eval_outputs \
+uv run --env-file "$(git rev-parse --show-toplevel)/.env" --directory "$(git rev-parse --show-toplevel)/implementations/agentic_vqa_eval" -m agentic_chartqapro_eval.eval.eval_outputs \
     --mep_dir meps/gemini_gemini/chartqapro/test \
     --out output/metrics.jsonl \
     --no_judge          # omit this flag to enable LLM judge (costs API calls)
@@ -315,7 +317,7 @@ The `predicted` column always reflects the **final answer** — the verifier's o
 ### 5. Evaluate traces (Pass 2 — latency and replayability)
 
 ```bash
-uv run --env-file .env -m agentic_chartqapro_eval.eval.eval_traces \
+uv run --env-file "$(git rev-parse --show-toplevel)/.env" --directory "$(git rev-parse --show-toplevel)/implementations/agentic_vqa_eval" -m agentic_chartqapro_eval.eval.eval_traces \
     --mep_dir meps/gemini_gemini/chartqapro/test \
     --out output/trace_metrics.jsonl
 ```
@@ -325,7 +327,7 @@ uv run --env-file .env -m agentic_chartqapro_eval.eval.eval_traces \
 Re-queries the VLM for each MEP asking for the 3 most likely candidate answers:
 
 ```bash
-uv run --env-file .env -magentic_chartqapro_eval.eval.eval_topk \
+uv run --env-file "$(git rev-parse --show-toplevel)/.env" --directory "$(git rev-parse --show-toplevel)/implementations/agentic_vqa_eval" -m agentic_chartqapro_eval.eval.eval_topk \
     --mep_dir meps/gemini_gemini/chartqapro/test \
     --out output/topk_metrics.jsonl \
     --backend gemini \
@@ -338,7 +340,7 @@ This pass does **not** modify existing MEPs or `metrics.jsonl`.
 ### 7. Summarize results
 
 ```bash
-uv run --env-file .env -magentic_chartqapro_eval.eval.summarize \
+uv run --env-file "$(git rev-parse --show-toplevel)/.env" --directory "$(git rev-parse --show-toplevel)/implementations/agentic_vqa_eval" -m agentic_chartqapro_eval.eval.summarize \
     --metrics output/metrics.jsonl \
     --out output/summary.csv
 ```
@@ -348,7 +350,7 @@ uv run --env-file .env -magentic_chartqapro_eval.eval.summarize \
 This pass asks **why** the agent was wrong, not just **that** it was wrong. A VLM is given the original chart image alongside the wrong answer, the correct answer, the agent's explanation, and the inspection plan — so it can make a *visual* diagnosis of the failure mode.
 
 ```bash
-uv run --env-file .env -m agentic_chartqapro_eval.eval.error_taxonomy \
+uv run --env-file "$(git rev-parse --show-toplevel)/.env" --directory "$(git rev-parse --show-toplevel)/implementations/agentic_vqa_eval" -m agentic_chartqapro_eval.eval.error_taxonomy \
     --mep_dir meps/gemini_gemini/chartqapro/test \
     --metrics_file output/metrics.jsonl \
     --out output/taxonomy.jsonl
@@ -408,7 +410,7 @@ for sid in revised:
 Generates a single portable HTML file with summary cards, accuracy tables, verifier stats, failure taxonomy breakdown, and a per-sample results table:
 
 ```bash
-uv run --env-file .env -m agentic_chartqapro_eval.eval.report \
+uv run --env-file "$(git rev-parse --show-toplevel)/.env" --directory "$(git rev-parse --show-toplevel)/implementations/agentic_vqa_eval" -m agentic_chartqapro_eval.eval.report \
     --metrics output/metrics.jsonl \
     --taxonomy output/taxonomy.jsonl \
     --out output/report.html
@@ -515,13 +517,13 @@ The framework auto-detects these variables. If they are absent, all Langfuse cal
 Run once before starting experiments. This creates versioned entries for `planner.txt` and `vision.txt` in Langfuse Prompt Management so every future experiment links to the exact prompt version used.
 
 ```bash
-uv run --env-file .env -m -m agentic_chartqapro_eval.langfuse_integration.prompts
+uv run --env-file "$(git rev-parse --show-toplevel)/.env" --directory "$(git rev-parse --show-toplevel)/implementations/agentic_vqa_eval" -m agentic_chartqapro_eval.langfuse_integration.prompts
 ```
 
 ### 4. Register the dataset
 
 ```bash
-uv run --env-file .env -m agentic_chartqapro_eval.langfuse_integration.dataset \
+uv run --env-file "$(git rev-parse --show-toplevel)/.env" --directory "$(git rev-parse --show-toplevel)/implementations/agentic_vqa_eval" -m agentic_chartqapro_eval.langfuse_integration.dataset \
     --split test --n 25
 ```
 
@@ -536,7 +538,7 @@ No extra flags needed. When `LANGFUSE_PUBLIC_KEY` and `LANGFUSE_SECRET_KEY` are 
 - stores the `lf_trace_id` in the MEP for later score attachment
 
 ```bash
-uv run --env-file .env -m agentic_chartqapro_eval.runner.run_generate_meps \
+uv run --env-file "$(git rev-parse --show-toplevel)/.env" --directory "$(git rev-parse --show-toplevel)/implementations/agentic_vqa_eval" -m agentic_chartqapro_eval.runner.run_generate_meps \
     --split test --n 25 --config gemini_gemini --workers 4 --out meps/
 ```
 
@@ -545,7 +547,7 @@ uv run --env-file .env -m agentic_chartqapro_eval.runner.run_generate_meps \
 After running `eval_outputs.py`, accuracy and judge scores are automatically written back to the Langfuse traces:
 
 ```bash
-uv run --env-file .env -m agentic_chartqapro_eval.eval.eval_outputs \
+uv run --env-file "$(git rev-parse --show-toplevel)/.env" --directory "$(git rev-parse --show-toplevel)/implementations/agentic_vqa_eval" -m agentic_chartqapro_eval.eval.eval_outputs \
     --mep_dir meps/gemini_gemini/chartqapro/test \
     --out metrics.jsonl
 ```
@@ -555,7 +557,7 @@ uv run --env-file .env -m agentic_chartqapro_eval.eval.eval_outputs \
 If you have MEPs from runs before Langfuse was configured, import them without re-running the pipeline:
 
 ```bash
-uv run --env-file .env -m agentic_chartqapro_eval.langfuse_integration.ingest \
+uv run --env-file "$(git rev-parse --show-toplevel)/.env" --directory "$(git rev-parse --show-toplevel)/implementations/agentic_vqa_eval" -m agentic_chartqapro_eval.langfuse_integration.ingest \
     --mep_dir meps/gemini_gemini/chartqapro/test \
     --metrics_file metrics.jsonl   # optional: attaches scores if available
 ```
