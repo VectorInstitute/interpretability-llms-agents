@@ -65,7 +65,7 @@ Key dependencies include:
 
 ## Troubleshooting
 
-### `ImportError: cannot import name '__version__' from 'datasets' (unknown location)`
+`ImportError: cannot import name '__version__' from 'datasets' (unknown location)`
 
 This happens when the `xai-refresher` dependency group has been installed in the same
 environment. That group includes `xl-vlm`, which ships its own top-level `datasets/`
@@ -98,11 +98,18 @@ Pointers for the main tools and ideas used here:
 
 ## Getting Started
 
-### Option A: Install this module locally (recommended)
-
-From the **repo root**:
+Run these commands from the **repo root**:
 
 ```bash
+# 1. Install dependencies for this module
 uv sync --group mechanistic-interp
-cd implementations/mechanistic_interpretability
+
+# 2. Launch JupyterLab
+uv run jupyter lab implementations/mechanistic_interpretability/
 ```
+
+Then open one of the notebooks listed above and run the cells in order.
+
+> **Note:** Do not install the `mechanistic-interp` and `xai-refresher` dependency groups
+> together — they conflict. See the Troubleshooting section if you hit an `ImportError`
+> about `datasets`.
