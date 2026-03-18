@@ -63,6 +63,25 @@ Key dependencies include:
 - **`transformers`, `accelerate`, `huggingface-hub`**: HuggingFace models + downloads (both tutorials)
 - **`torch`, `numpy`, `matplotlib`, `tqdm`, `pillow`, `requests`**: core runtime + plotting/utilities
 
+## Troubleshooting
+
+### `ImportError: cannot import name '__version__' from 'datasets' (unknown location)`
+
+This happens when the `xai-refresher` dependency group has been installed in the same
+environment. That group includes `xl-vlm`, which ships its own top-level `datasets/`
+module that shadows the HuggingFace `datasets` package.
+
+Fix — from the repo root, reinstall `datasets` to restore the missing `__init__.py`:
+
+```bash
+uv pip install --force-reinstall "datasets>=4.0.0"
+```
+
+Then restart the kernel and re-run the notebook.
+
+To prevent this permanently, never install the `xai-refresher` and `mechanistic-interp`
+dependency groups together (they are declared as conflicting in the root `pyproject.toml`).
+
 ## Resources
 
 Pointers for the main tools and ideas used here:
@@ -84,11 +103,6 @@ Pointers for the main tools and ideas used here:
 From the **repo root**:
 
 ```bash
+uv sync --group mechanistic-interp
 cd implementations/mechanistic_interpretability
-sudo apt install python3.10 python3.10-venv
-python3.10 -m venv .venv
-source .venv/bin/activate
-pip install -U pip
-pip install -e .
-python -m ipykernel install --user --name mech-interp --display-name "Python (mech-interp)"
 ```
