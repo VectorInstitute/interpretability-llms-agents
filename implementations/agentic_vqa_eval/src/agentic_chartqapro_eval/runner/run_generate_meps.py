@@ -25,6 +25,13 @@ from ..agents.verifier_agent import VerifierAgent
 from ..agents.vision_agent import VisionAgent
 from ..datasets.chartqapro_loader import load_chartqapro
 from ..datasets.perceived_sample import PerceivedSample
+from ..langfuse_integration.client import get_client
+from ..langfuse_integration.dataset import register_dataset
+from ..langfuse_integration.prompts import push_prompts
+from ..langfuse_integration.tracing import (
+    log_trace_scores,
+    sample_trace,
+)
 from ..mep.schema import (
     MEP,
     ImageRef,
@@ -37,13 +44,6 @@ from ..mep.schema import (
     MEPVision,
 )
 from ..mep.writer import write_mep
-from ..langfuse_integration.client import get_client
-from ..langfuse_integration.dataset import register_dataset
-from ..langfuse_integration.prompts import push_prompts
-from ..langfuse_integration.tracing import (
-    log_trace_scores,
-    sample_trace,
-)
 from ..tools.ocr_reader_tool import OcrReaderTool
 from ..utils.hashing import sha256_file
 from ..utils.json_strict import parse_strict

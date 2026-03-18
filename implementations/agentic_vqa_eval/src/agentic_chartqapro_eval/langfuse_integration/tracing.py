@@ -8,6 +8,8 @@ import contextlib
 from contextlib import contextmanager
 from typing import Optional
 
+from langfuse import propagate_attributes
+
 
 def _normalize_usage(usage: dict) -> dict:
     """Map provider usage dicts (OpenAI/Gemini) to Langfuse v4 usage_details keys."""
@@ -65,32 +67,58 @@ def sample_trace(
     run_id: str,
     project_name: str = "chartqapro-eval",
 ):  # type: ignore[return]
-    """Open a Langfuse trace for one sample; yield a _TraceHandle (or None)."""
+    """
+    Context manager to create a Langfuse trace for a single sample.
+
+    Parameters
+    ----------
+    client : object
+        The Langfuse client. If None, the context manager yields None.
+    sample_id : str
+        Unique identifier for the sample.
+    question : str
+        The input prompt text.
+    expected_output : str
+        The ground truth answer.
+    question_type : str
+        The category of the question.
+    config_name : str
+        The evaluation configuration used.
+    run_id : str
+        The unique ID of the pipeline run.
+    project_name : str, default 'chartqapro-eval'
+        Langfuse project identifier (ignored in v4; use SDK config).
+
+    Yields
+    ------
+    trace_handle : _TraceHandle or None
+        The initialized trace object.
+    """
     del project_name  # kept for API compatibility; Langfuse v4 uses project from SDK config
     if client is None:
         yield None
         return
 
-    from langfuse import propagate_attributes
-
-    with client.start_as_current_observation(  # type: ignore[union-attr]
-        name=f"chartqapro/{sample_id}",
-        as_type="span",
-        input={"question": question, "expected_output": expected_output},
-        metadata={
-            "run_id": run_id,
-            "config": config_name,
-            "question_type": question_type,
-        },
-    ) as span:
-        with propagate_attributes(session_id=run_id):
-            trace_id = client.get_current_trace_id()  # type: ignore[union-attr]
-            handle = _TraceHandle(span=span, trace_id=trace_id)
-            try:
-                yield handle
-            finally:
-                with contextlib.suppress(Exception):
-                    client.flush()  # type: ignore[union-attr]
+    with (
+        client.start_as_current_observation(  # type: ignore[union-attr]
+            name=f"chartqapro/{sample_id}",
+            as_type="span",
+            input={"question": question, "expected_output": expected_output},
+            metadata={
+                "run_id": run_id,
+                "config": config_name,
+                "question_type": question_type,
+            },
+        ) as span,
+        propagate_attributes(session_id=run_id),
+    ):
+        trace_id = client.get_current_trace_id()  # type: ignore[union-attr]
+        handle = _TraceHandle(span=span, trace_id=trace_id)
+        try:
+            yield handle
+        finally:
+            with contextlib.suppress(Exception):
+                client.flush()  # type: ignore[union-attr]
 
 
 def open_llm_span(
@@ -101,10 +129,31 @@ def open_llm_span(
     metadata: Optional[dict] = None,
     parent_span_id: Optional[str] = None,
 ) -> object:
-    """Create a Langfuse generation on the trace span (or return None).
+    """
+    Begin a Langfuse generation observation on the given trace span.
 
     ``parent_span_id`` is accepted for API compatibility but is unused in v4 —
     nesting is handled by calling ``start_observation`` on the parent span.
+
+    Parameters
+    ----------
+    trace : object
+        The parent trace or span.
+    name : str
+        Logical name for the operation.
+    input_data : dict
+        Model inputs.
+    model : str
+        Model identifier.
+    metadata : dict, optional
+        Additional context keys.
+    parent_span_id : str, optional
+        Explicit parent linkage (ignored in v4; nesting is contextual).
+
+    Returns
+    -------
+    object or None
+        The active span object.
     """
     del parent_span_id  # kept for API compatibility; v4 uses contextual nesting
     if trace is None:
@@ -129,7 +178,23 @@ def close_span(
     usage: Optional[dict] = None,
     error: Optional[str] = None,
 ) -> None:
-    """End a Langfuse generation (no-op if span is None)."""
+    """Log results and terminate an active span.
+
+    Parameters
+    ----------
+    span : object
+        The span to close.
+    output : dict, optional
+        The model output to log.
+    usage : dict, optional
+        The provider usage dict (e.g. OpenAI or Gemini keys).
+    error : str, optional
+        An error message to log (if any).
+
+    Returns
+    -------
+    None
+    """
     if span is None:
         return
     with contextlib.suppress(Exception):
@@ -147,7 +212,20 @@ def close_span(
 
 
 def log_trace_scores(trace: object, scores: dict) -> None:
-    """Log a dict of {metric_name: float} as scores on the trace."""
+    """
+    Attach quantitative feedback scores to a trace.
+
+    Parameters
+    ----------
+    trace : object
+        The trace to update.
+    scores : dict
+        Mapping of metric names to numeric values.
+
+    Returns
+    -------
+    None
+    """
     if trace is None:
         return
     for name, value in scores.items():

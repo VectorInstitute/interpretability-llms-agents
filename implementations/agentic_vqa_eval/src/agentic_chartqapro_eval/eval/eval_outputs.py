@@ -16,8 +16,8 @@ from typing import Optional
 
 from dotenv import load_dotenv
 
-from ..mep.writer import iter_meps
 from ..langfuse_integration.client import get_client
+from ..mep.writer import iter_meps
 from .judge import judge_mep
 
 
@@ -145,11 +145,7 @@ def evaluate_mep(
             score_keys = ["answer_accuracy", "latency_sec"] + (
                 [f"judge_{k}" for k in judge_scores] if use_judge else []
             )
-            scores = {
-                k: metrics[k]
-                for k in score_keys
-                if isinstance(metrics.get(k), (int, float))
-            }
+            scores = {k: metrics[k] for k in score_keys if isinstance(metrics.get(k), (int, float))}
             for k, v in scores.items():
                 with contextlib.suppress(Exception):
                     client.create_score(trace_id=lf_trace_id, name=k, value=float(v))

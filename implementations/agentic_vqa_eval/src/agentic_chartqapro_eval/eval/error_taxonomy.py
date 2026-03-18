@@ -23,8 +23,8 @@ from dotenv import load_dotenv
 from google import genai
 from openai import OpenAI
 
-from ..mep.writer import iter_meps
 from ..langfuse_integration.client import get_client
+from ..mep.writer import iter_meps
 from ..utils.json_strict import parse_strict
 
 

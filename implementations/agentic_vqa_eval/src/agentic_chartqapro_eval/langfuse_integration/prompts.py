@@ -64,9 +64,7 @@ def push_prompts(
 
 def main() -> None:
     """Parse CLI arguments and push prompt files to Langfuse Prompt Management."""
-    parser = argparse.ArgumentParser(
-        description="Push prompt files to Langfuse Prompt Management"
-    )
+    parser = argparse.ArgumentParser(description="Push prompt files to Langfuse Prompt Management")
     parser.add_argument("--planner", default=None, help="Path to planner.txt")
     parser.add_argument("--vision", default=None, help="Path to vision.txt")
     args = parser.parse_args()

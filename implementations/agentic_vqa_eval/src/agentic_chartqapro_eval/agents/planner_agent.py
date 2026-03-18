@@ -137,9 +137,7 @@ class PlannerAgent:
         self.api_key = api_key
         self._llm = _build_llm(backend, model, api_key)
 
-    def run(
-        self, sample: PerceivedSample, lf_trace: Any = None
-    ) -> Tuple[str, dict, bool, str]:
+    def run(self, sample: PerceivedSample, lf_trace: Any = None) -> Tuple[str, dict, bool, str]:
         """
         Execute the planning phase for a new question.
 

@@ -154,17 +154,13 @@ def ingest_dir(
 def main() -> None:
     """Parse CLI arguments and ingest MEP files into Langfuse."""
     parser = argparse.ArgumentParser(description="Ingest existing MEPs into Langfuse")
-    parser.add_argument(
-        "--mep_dir", required=True, help="Directory containing MEP JSON files"
-    )
+    parser.add_argument("--mep_dir", required=True, help="Directory containing MEP JSON files")
     parser.add_argument(
         "--metrics_file",
         default=None,
         help="Optional metrics.jsonl for feedback scores",
     )
-    parser.add_argument(
-        "--project", default="chartqapro-eval", help="Langfuse project name (metadata)"
-    )
+    parser.add_argument("--project", default="chartqapro-eval", help="Langfuse project name (metadata)")
     args = parser.parse_args()
 
     ingest_dir(args.mep_dir, args.metrics_file, project_name=args.project)

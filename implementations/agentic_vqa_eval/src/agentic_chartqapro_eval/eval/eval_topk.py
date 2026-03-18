@@ -232,9 +232,7 @@ def main() -> None:
                 cands = result["topk_candidates"]
                 h1 = result.get("hit_at_1", 0)
                 h3 = result.get(f"hit_at_{args.k}", 0)
-                print(
-                    f"  {sid}  exp={exp!r}  candidates={cands}  hit@1={h1}  hit@{args.k}={h3}"
-                )
+                print(f"  {sid}  exp={exp!r}  candidates={cands}  hit@1={h1}  hit@{args.k}={h3}")
 
                 lf_trace_id = mep.get("lf_trace_id")
                 if lf_client and lf_trace_id:
@@ -247,7 +245,7 @@ def main() -> None:
                                     name=key,
                                     value=float(result[key]),
                                 )
-                                
+
                 count += 1
             except Exception as exc:
                 print(f"  Error: {exc}")

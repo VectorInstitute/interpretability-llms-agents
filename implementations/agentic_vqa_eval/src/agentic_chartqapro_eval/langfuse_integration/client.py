@@ -5,6 +5,10 @@ langfuse is not installed, so every caller can guard with ``if client:``.
 """
 
 import os
+from contextlib import suppress
+
+from dotenv import load_dotenv
+from langfuse import Langfuse
 
 
 _client = None
@@ -12,19 +16,26 @@ _initialised = False
 
 
 def get_client():
-    """Return a configured langfuse.Langfuse() instance, or None if unavailable."""
+    """
+    Initialize and return a globally cached Langfuse client.
+
+    Retrieves configuration from environment variables and configures
+    the SDK for local or cloud usage.
+
+    Returns
+    -------
+    Langfuse or None
+        An active client, or None if configuration is missing or invalid.
+    """
     global _client, _initialised  # noqa: PLW0603
     if _initialised:
         return _client
 
     _initialised = True
 
-    try:
-        from dotenv import load_dotenv
-
+    # Load environment variables from .env file
+    with suppress(Exception):
         load_dotenv()
-    except ImportError:
-        pass
 
     public_key = os.environ.get("LANGFUSE_PUBLIC_KEY", "")
     secret_key = os.environ.get("LANGFUSE_SECRET_KEY", "")
@@ -33,8 +44,6 @@ def get_client():
         return None
 
     try:
-        from langfuse import Langfuse
-
         kwargs: dict = {"public_key": public_key, "secret_key": secret_key}
         # Accept LANGFUSE_HOST or LANGFUSE_BASE_URL (both are common)
         host = os.environ.get("LANGFUSE_HOST") or os.environ.get("LANGFUSE_BASE_URL", "")
@@ -50,7 +59,13 @@ def get_client():
 
 
 def reset_client() -> None:
-    """Force re-initialisation on next call (useful for tests)."""
+    """
+    Clear the cached client and reset initialization state.
+
+    Returns
+    -------
+    None
+    """
     global _client, _initialised  # noqa: PLW0603
     _client = None
     _initialised = False

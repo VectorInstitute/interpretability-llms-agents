@@ -1,1 +1,1 @@
-"""Langfuse observability integration — tracing, prompt versioning, dataset registration."""
+"""Langfuse observability integration."""
