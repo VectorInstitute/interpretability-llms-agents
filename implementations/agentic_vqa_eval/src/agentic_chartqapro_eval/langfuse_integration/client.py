@@ -11,6 +11,21 @@ from dotenv import load_dotenv
 from langfuse import Langfuse
 
 
+try:
+    from openinference.instrumentation.google_genai import GoogleGenAIInstrumentor
+
+    _google_instrumentor = GoogleGenAIInstrumentor()
+except Exception:
+    _google_instrumentor = None  # type: ignore[assignment]
+
+try:
+    from openinference.instrumentation.openai import OpenAIInstrumentor
+
+    _openai_instrumentor = OpenAIInstrumentor()
+except Exception:
+    _openai_instrumentor = None  # type: ignore[assignment]
+
+
 _client = None
 _initialised = False
 
@@ -51,6 +66,14 @@ def get_client():
             kwargs["host"] = host
 
         _client = Langfuse(**kwargs)
+        # Activate OTel auto-instrumentation so provider SDK calls (Google GenAI,
+        # OpenAI) are captured as detailed child spans inside Langfuse traces.
+        if _google_instrumentor is not None:
+            with suppress(Exception):
+                _google_instrumentor.instrument()
+        if _openai_instrumentor is not None:
+            with suppress(Exception):
+                _openai_instrumentor.instrument()
     except Exception as exc:
         print(f"[langfuse] client init failed: {exc}")
         _client = None
