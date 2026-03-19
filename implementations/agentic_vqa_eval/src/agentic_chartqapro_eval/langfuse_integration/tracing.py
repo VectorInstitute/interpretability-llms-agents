@@ -8,11 +8,31 @@ import contextlib
 from contextlib import contextmanager
 from typing import Optional
 
-from langfuse import propagate_attributes
+
+try:
+    from langfuse import propagate_attributes  # requires langfuse>=4
+except Exception:
+
+    @contextmanager  # type: ignore[misc]
+    def propagate_attributes(**_: object):  # type: ignore[misc]
+        """Fallback no-op context manager if langfuse v4 is not available."""
+        yield
 
 
 def _normalize_usage(usage: dict) -> dict:
-    """Map provider usage dicts (OpenAI/Gemini) to Langfuse v4 usage_details keys."""
+    """
+    Map provider usage dicts (OpenAI/Gemini) to Langfuse v4 usage_details keys.
+
+    Parameters
+    ----------
+    usage : dict
+        The raw usage dict from the provider.
+
+    Returns
+    -------
+    dict
+        Normalized usage details for Langfuse.
+    """
     normalized: dict = {}
     # OpenAI keys
     if "prompt_tokens" in usage:

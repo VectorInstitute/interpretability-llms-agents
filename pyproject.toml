@@ -23,7 +23,7 @@ dependencies = [
     "python-dotenv>=1.2.2",
     "scikit-learn>=1.5.2",
     "transformers>=4.47.0",
-    "langfuse>=3.10.3",
+    "langfuse>=4",
 ]
 
 [dependency-groups]
