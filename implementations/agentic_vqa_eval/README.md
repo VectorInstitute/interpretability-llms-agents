@@ -12,6 +12,8 @@ The core contribution is the **Model Evaluation Packet (MEP)** — a portable JS
 
 ## Architecture Overview
 
+<details>
+<summary>Show pipeline diagram</summary>
 
 ```
 ┌──────────────────────────────────────────────────────────┐
@@ -112,6 +114,8 @@ The core contribution is the **Model Evaluation Packet (MEP)** — a portable JS
                (summary.csv by config × question_type)
 ```
 
+</details>
+
 ### Explainability at Four Levels
 
 This framework produces explainability signals at four distinct levels:
@@ -143,6 +147,9 @@ This framework produces explainability signals at four distinct levels:
 
 ## Package Dependencies
 
+<details>
+<summary>Show dependencies table</summary>
+
 | Package | Version | Purpose |
 |---|---|---|
 | `crewai` | 1.10.1 | Multi-agent framework: Agent, Task, Crew, LLM, BaseTool |
@@ -159,9 +166,14 @@ This framework produces explainability signals at four distinct levels:
 | `streamlit` | ≥1.32 | Interactive evaluation dashboard |
 | `jupyter` / `ipykernel` | latest | Analysis notebook |
 
+</details>
+
 ---
 
 ## Internal Package Structure
+
+<details>
+<summary>Show package tree</summary>
 
 ```
 src/agentic_chartqapro_eval/
@@ -211,16 +223,18 @@ src/agentic_chartqapro_eval/
     └── ingest.py           — Retroactively import existing MEP files into Langfuse
 ```
 
+</details>
+
 ---
 
 ## Getting Started
 
 ### 1. Install dependencies
 
-From the **root of the repository**, install the `ref6-agentic-xai-eval` dependency group using `uv`:
+From the **root of the repository**, install the `agentic-xai-eval` dependency group using `uv`:
 
 ```bash
-uv sync --group ref6-agentic-xai-eval
+uv sync --group agentic-xai-eval
 source .venv/bin/activate
 ```
 
@@ -240,7 +254,19 @@ cp .env.example .env
 
 The `.env` file lives at the **repo root**. `load_dotenv()` searches upward from the working directory, so it is found automatically regardless of which subdirectory you run commands from.
 
-### 3. Generate MEPs (run the agentic pipeline)
+### 3. Run integration tests to validate your API keys
+
+```bash
+uv run --env-file .env pytest -sv tests/tool_tests/test_integration.py
+```
+
+> **Note:** If your `.env` file is incomplete or needs to be updated, you can re-run onboarding manually from inside your Coder workspace (from the repo root):
+>
+> ```bash
+> onboard --bootcamp-name "llm-interpretability-bootcamp" --output-dir "." --test-script "./aieng-llm-interp/tests/test_integration.py" --env-example "./.env.example" --test-marker "integration_test" --force
+> ```
+
+### 4. Generate MEPs (run the agentic pipeline)
 
 > **Note:** All `uv run` commands below use `$(git rev-parse --show-toplevel)` so they work from any directory in the repo — it resolves the repo root for `--env-file`, while `--directory` ensures outputs (`meps/`, `output/`) are written inside `implementations/agentic_vqa_eval/`.
 
@@ -297,7 +323,7 @@ When OCR is skipped, `"ocr": null` appears in the MEP and `"ocr_ms": 0.0` in tim
 
 **Context injection:** The VisionAgent uses a single shared prompt template (`agents/prompts/vision.txt`) that contains an `{ocr_block}` placeholder. When OCR ran successfully, this block is populated with the structured OCR fields (chart type, title, axis labels, legend). When OCR is skipped or produced no output, `{ocr_block}` renders as an empty string — the prompt is otherwise identical. This is a useful example of conditional context injection: the same template handles both modes without branching at the prompt level.
 
-### 4. Evaluate outputs (Pass 1 — accuracy + judge)
+### 5. Evaluate outputs (Pass 1 — accuracy + judge)
 
 ```bash
 uv run --env-file "$(git rev-parse --show-toplevel)/.env" --directory "$(git rev-parse --show-toplevel)/implementations/agentic_vqa_eval" -m agentic_chartqapro_eval.eval.eval_outputs \
@@ -314,7 +340,7 @@ When the verifier ran, two extra columns are present:
 
 The `predicted` column always reflects the **final answer** — the verifier's output when it ran, or the vision agent's output when skipped. This means accuracy scores automatically capture any corrections made by the verifier.
 
-### 5. Evaluate traces (Pass 2 — latency and replayability)
+### 6. Evaluate traces (Pass 2 — latency and replayability)
 
 ```bash
 uv run --env-file "$(git rev-parse --show-toplevel)/.env" --directory "$(git rev-parse --show-toplevel)/implementations/agentic_vqa_eval" -m agentic_chartqapro_eval.eval.eval_traces \
@@ -322,7 +348,7 @@ uv run --env-file "$(git rev-parse --show-toplevel)/.env" --directory "$(git rev
     --out output/trace_metrics.jsonl
 ```
 
-### 6. Run Top-K evaluation (hit@1/2/3)
+### 7. Run Top-K evaluation (hit@1/2/3)
 
 Re-queries the VLM for each MEP asking for the 3 most likely candidate answers:
 
@@ -337,7 +363,7 @@ uv run --env-file "$(git rev-parse --show-toplevel)/.env" --directory "$(git rev
 
 This pass does **not** modify existing MEPs or `metrics.jsonl`.
 
-### 7. Summarize results
+### 8. Summarize results
 
 ```bash
 uv run --env-file "$(git rev-parse --show-toplevel)/.env" --directory "$(git rev-parse --show-toplevel)/implementations/agentic_vqa_eval" -m agentic_chartqapro_eval.eval.summarize \
@@ -345,7 +371,7 @@ uv run --env-file "$(git rev-parse --show-toplevel)/.env" --directory "$(git rev
     --out output/summary.csv
 ```
 
-### 8. Failure taxonomy (Pass 4 — VLM-based diagnosis)
+### 9. Failure taxonomy (Pass 4 — VLM-based diagnosis)
 
 This pass asks **why** the agent was wrong, not just **that** it was wrong. A VLM is given the original chart image alongside the wrong answer, the correct answer, the agent's explanation, and the inspection plan — so it can make a *visual* diagnosis of the failure mode.
 
@@ -360,6 +386,9 @@ Each line in `taxonomy.jsonl` contains a `failure_type` (one of the categories b
 
 **Failure categories:**
 
+<details>
+<summary>Show failure categories</summary>
+
 | Category | Description |
 |---|---|
 | `correct` | Model got it right — no VLM call made |
@@ -371,6 +400,8 @@ Each line in `taxonomy.jsonl` contains a `failure_type` (one of the categories b
 | `question_misunderstanding` | Answered a different or adjacent question |
 | `extraction_error` | Could not locate the relevant data in the chart at all |
 | `other` | Does not fit any category above |
+
+</details>
 
 **Why VLM instead of text-only LLM?**
 A text-only judge can only read the agent's description of what it saw. A VLM can independently verify whether the axis labels were actually ambiguous, whether the cited data point actually appears in the image, or whether the legend entries are genuinely confusing — producing a grounded diagnosis rather than a guess.
@@ -403,7 +434,7 @@ for sid in revised:
 "
 ```
 
-### 9. Visualization & Reporting
+### 10. Visualization & Reporting
 
 #### HTML report (no extra dependencies)
 
@@ -459,6 +490,11 @@ Pre-built cells walk through: loading MEPs, accuracy by question type, verifier 
 
 Langfuse is an open-source LLM observability platform that adds a live visualization and experiment-comparison layer on top of the MEP artifacts. MEPs remain the portable ground truth; Langfuse is purely additive.
 
+> **Optional:** If `LANGFUSE_PUBLIC_KEY` and `LANGFUSE_SECRET_KEY` are not set in `.env`, all Langfuse calls are silent no-ops and the pipeline runs exactly as before.
+
+<details>
+<summary>Show Langfuse setup and usage</summary>
+
 ### What Langfuse gives you
 
 | Feature | Detail |
@@ -510,8 +546,6 @@ LANGFUSE_SECRET_KEY=sk-lf-...
 # LANGFUSE_HOST=https://cloud.langfuse.com  # default; change for self-hosted
 ```
 
-The framework auto-detects these variables. If they are absent, all Langfuse calls are silent no-ops and the pipeline runs exactly as before.
-
 ### 3. Push prompt versions to Langfuse
 
 Run once before starting experiments. This creates versioned entries for `planner.txt` and `vision.txt` in Langfuse Prompt Management so every future experiment links to the exact prompt version used.
@@ -531,11 +565,7 @@ This creates a dataset named `ChartQAPro_test` in Langfuse containing one item p
 
 ### 5. Live tracing (automatic on new runs)
 
-No extra flags needed. When `LANGFUSE_PUBLIC_KEY` and `LANGFUSE_SECRET_KEY` are set, the pipeline automatically:
-- registers the dataset and versions the prompts at run start
-- opens a Langfuse trace per sample
-- creates `planner` and `vision_qa_tool` child generations with inputs, outputs, and token usage
-- stores the `lf_trace_id` in the MEP for later score attachment
+No extra flags needed. When `LANGFUSE_PUBLIC_KEY` and `LANGFUSE_SECRET_KEY` are set, the pipeline automatically registers the dataset and versions the prompts at run start, opens a Langfuse trace per sample, creates child generations with inputs/outputs/token usage, and stores the `lf_trace_id` in the MEP for later score attachment.
 
 ```bash
 uv run --env-file "$(git rev-parse --show-toplevel)/.env" --directory "$(git rev-parse --show-toplevel)/implementations/agentic_vqa_eval" -m agentic_chartqapro_eval.runner.run_generate_meps \
@@ -562,9 +592,14 @@ uv run --env-file "$(git rev-parse --show-toplevel)/.env" --directory "$(git rev
     --metrics_file metrics.jsonl   # optional: attaches scores if available
 ```
 
+</details>
+
 ---
 
 ## MEP Schema
+
+<details>
+<summary>Show full MEP schema and field reference</summary>
 
 Each MEP file is a self-contained JSON evaluation artifact:
 
@@ -620,16 +655,19 @@ Each MEP file is a self-contained JSON evaluation artifact:
   },
   "timestamps": { "planner_ms": 2185, "ocr_ms": 1243, "vision_ms": 5684, "verifier_ms": 3712 },
   "errors": [],
-  "lf_trace_id": "abc123..."   // present when Langfuse tracing is active
+  "lf_trace_id": "abc123..."
 }
 ```
 
 `ocr` is `null` when `--no_ocr` is passed. When present, `ocr.parsed` contains: `chart_type`, `title`, `x_axis`, `y_axis`, `legend`, `data_labels`, `annotations`.
 
 `verifier` is `null` when `--no_verifier` was passed. When present, `verifier.verdict` is one of:
+
 - `"confirmed"` — second model agreed with the draft answer
 - `"revised"` — second model caught an error and corrected the answer
 - `"skipped"` — verifier ran but fell back due to missing image or error
+
+</details>
 
 ---
 
@@ -646,33 +684,46 @@ Each MEP file is a self-contained JSON evaluation artifact:
 
 ## FAQ
 
+<details>
+<summary>Show all FAQs</summary>
+
 ### 1. What is the purpose of the MEP schema?
+
 The Model Evaluation Packet (MEP) schema is designed to provide a comprehensive, portable, and reproducible trace of the evaluation process. It captures all relevant details, including the inspection plan, tool calls, timestamps, and errors, enabling post-hoc analysis and comparison across models.
 
 ### 2. Can I use a different dataset with this framework?
+
 Yes, the framework is modular and supports other datasets as long as they are compatible with the expected input format (question, chart image, expected answer). You may need to implement a custom dataset loader in `src/agentic_chartqapro_eval/datasets/`.
 
 ### 3. How do I add a new vision or planner backend?
+
 To add a new backend, you need to:
+
 - Implement the corresponding tool or agent in `src/agentic_chartqapro_eval/tools/` or `src/agentic_chartqapro_eval/agents/`.
 - Update the configuration options in `run_generate_meps.py` to include the new backend.
 
 ### 4. What happens if the VisionAgent produces malformed JSON?
+
 The framework uses the `json_repair` library to attempt to fix malformed JSON outputs. If repair fails, the error is logged in the MEP under the `errors` field.
 
 ### 5. How can I customize the evaluation rubric?
+
 The evaluation rubric is defined in `src/agentic_chartqapro_eval/eval/judge.py`. You can modify the scoring dimensions or add new ones by editing the `judge` function.
 
 ### 6. Is it possible to run the framework without API calls?
+
 Yes, you can use pre-generated MEPs for evaluation by skipping the generation step. This is useful for offline analysis or when API usage is restricted.
 
 ### 7. How do I handle large datasets efficiently?
+
 For large datasets, consider:
+
 - Using the `--n` flag to process a subset of samples.
 - Increasing the `--workers` count to parallelize processing.
 - Running the pipeline on a machine with sufficient memory and disk space.
 
 ### 8. Where can I find more examples or tutorials?
+
 Refer to the Resources section for links to documentation, datasets, and related research papers. Additional examples may be added in future updates.
 
 ### 9. How does the VerifierAgent differ from the LLM judge?
@@ -690,4 +741,7 @@ They serve different purposes and run at different times:
 The verifier improves the pipeline's answer quality; the judge measures the pipeline's reasoning quality.
 
 ### 10. Do I need Langfuse to run the framework?
+
 No. Langfuse is entirely optional. If `LANGFUSE_PUBLIC_KEY` and `LANGFUSE_SECRET_KEY` are not set in `.env`, all Langfuse calls are silent no-ops. The pipeline produces the same MEPs, `metrics.jsonl`, and `summary.csv` as before.
+
+</details>
