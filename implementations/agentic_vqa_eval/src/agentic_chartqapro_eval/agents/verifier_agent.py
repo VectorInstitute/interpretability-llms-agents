@@ -216,7 +216,7 @@ class VerifierAgent:
             The inspection plan used by the previous agent.
         vision_parsed : dict
             The draft answer and explanation to audit.
-        opik_trace : Any, optional
+        langfuse_trace : Any, optional
             Tracing object for observability.
 
         Returns

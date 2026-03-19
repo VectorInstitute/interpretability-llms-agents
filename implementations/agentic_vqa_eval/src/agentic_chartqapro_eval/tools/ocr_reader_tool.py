@@ -115,7 +115,7 @@ class OcrReaderTool(BaseTool):
         start_ts = datetime.now(timezone.utc).isoformat()
         t0 = time.time()
 
-        opik_span = open_llm_span(
+        lf_span = open_llm_span(
             self.lf_trace,
             name="ocr_reader_tool",
             input_data={"image_path": image_path},
@@ -155,7 +155,7 @@ class OcrReaderTool(BaseTool):
         usage = provider_meta.get("usage", {})
 
         close_span(
-            opik_span,
+            lf_span,
             output={"raw_text": raw_text},
             usage=usage if usage else None,
             error=error_str,

@@ -189,7 +189,7 @@ class VisionAgent:
 
         Parameters
         ----------
-        opik_trace : Any, optional
+        langfuse_trace : Any, optional
             A tracing object for observability.
 
         Returns
@@ -228,7 +228,7 @@ class VisionAgent:
             The question and image to analyze.
         plan : dict
             The inspection procedure to follow.
-        opik_trace : Any, optional
+        langfuse_trace : Any, optional
             Trace object for execution tracking.
         ocr_result : dict, optional
             Ground-truth OCR data for grounding.

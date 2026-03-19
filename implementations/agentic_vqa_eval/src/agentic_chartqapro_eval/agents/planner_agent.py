@@ -148,7 +148,7 @@ class PlannerAgent:
         ----------
         sample : PerceivedSample
             The question and context to plan for.
-        opik_trace : Any, optional
+        langfuse_trace : Any, optional
             Observability object for logging.
 
         Returns

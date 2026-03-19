@@ -138,8 +138,8 @@ def process_sample(  # noqa: PLR0915
         Unique identifier for the current evaluation run.
     out_dir : str
         Directory where the resulting MEP JSON should be saved.
-    opik_client : object, optional
-        The Opik client for tracing.
+    langfuse_client : object, optional
+        The Langfuse client for tracing and observability.
     verifier_agent : VerifierAgent, optional
         The agent for pass 2.5 verification.
     ocr_tool : OcrReaderTool, optional
