@@ -74,7 +74,7 @@ This directly optimizes the model to prefer correct judgments while maintaining 
 
 ## Dataset Preparation
 
-The filtered `.parquet` files are not included in this repository.
+The filtered `.parquet` files are hosted in a GCP bucket and downloaded separately.
 
 ### Download Pre-Filtered Dataset (Recommended)
 
@@ -105,12 +105,26 @@ gcloud storage cp gs://interp-bootcamp-data/preference-alignment/data.zip .
 unzip data.zip
 ```
 
-Files are placed correctly after extraction — no manual reorganisation needed.
-
-#### 3) Cleanup temporary files:
+The zip extracts a `data/` folder. Move its contents up and remove the wrapper:
 
 ```bash
-rm -f __MACOSX data.zip data/.DS_Store
+mv data/data_sky . && mv data/data_hh_rlhf . && rm -rf data
+```
+
+#### 3) Cleanup temporary files
+
+```bash
+rm -rf __MACOSX data.zip .DS_Store
+```
+
+After setup, your directory should look like:
+
+```
+implementations/preference_alignment/
+├── data_sky/
+├── data_hh_rlhf/
+├── 01_dataset_construction.ipynb
+└── ...
 ```
 
 > **Note:** Use `train_sponsor_filtered.parquet` (for `data_sky`) and `train_singleturn_sponsor_filtered.parquet` (for `data_hh_rlhf`).
@@ -196,28 +210,36 @@ Once formatted properly, the rest of the pipeline (LLM-as-a-Judge → DPO → Ev
 From the **root of the repository**, install the `preference-alignment` dependency group using `uv`:
 
 ```bash
-uv sync --group preference-alignment
-source .venv/bin/activate
+uv sync --active --group preference-alignment
 ```
 
-> **CUDA note:** `torch==2.6.0` from PyPI includes CUDA support on Linux. If you specifically need the CUDA 12.4 build, run:
->
-> ```bash
-> uv sync --group preference-alignment \
->   --index-url https://download.pytorch.org/whl/cu124 # Not required for Linux users, but may be needed for Windows users
-> ```
->
-> **Conflict note:** The `preference-alignment` and `xai-refresher` groups cannot be installed together. Install only one at a time.
-
-### Installing `flash-attn` (optional, for faster attention)
-
-`flash-attn` requires CUDA headers and `setuptools` at compile time and cannot be installed via `uv sync`. After activating the venv, install it manually:
+The `--active` flag ensures packages are installed into the currently activated virtual environment. After syncing, re-activate the venv to ensure your shell picks up the correct paths:
 
 ```bash
-uv pip install flash-attn==2.7.3 --no-build-isolation
+deactivate
+source .venv/bin/activate
+which python3  # should point to .venv/bin/python inside the repo root
 ```
 
-> **Note:** This step requires a GPU node with CUDA available. Skip it if you are running on a CPU-only machine.
+> **Conflict note:** The `preference-alignment` and `xai-refresher` groups cannot be installed together. Install only one at a time.
+
+<details>
+<summary>Installing <code>flash-attn</code> (optional, for faster attention)</summary>
+
+`flash-attn` cannot be built from source on login nodes (no `nvcc`/`CUDA_HOME`). Install a pre-built wheel directly:
+
+```bash
+/path/to/.venv/bin/python -m pip install \
+  "https://github.com/Dao-AILab/flash-attention/releases/download/v2.7.3/flash_attn-2.7.3%2Bcu12torch2.8cxx11abiTRUE-cp312-cp312-linux_x86_64.whl"
+```
+
+> Use `/path/to/.venv/bin/python -m pip` (explicit venv python) rather than bare `pip` or `python`, to avoid installing into the wrong environment.
+>
+> The `cu12torch2.8` wheel is compatible with `torch 2.10+cu12x`. Do **not** use `pip install flash-attn==2.7.3 --no-build-isolation` — pip will reject pre-built wheels with local version labels (e.g. `2.7.3+cu12...`) when an exact version like `==2.7.3` is requested.
+>
+> Skip this step entirely if running on a CPU-only machine.
+
+</details>
 
 ## Notes
 
@@ -225,7 +247,6 @@ uv pip install flash-attn==2.7.3 --no-build-isolation
 - Ensure GPU availability before running ```02_inference_runner.ipynb``` and ```04_dpo_training.ipynb```.
 - The quality of alignment depends strongly on the judge model and prompt design.
 - Our results might have less win rate since we used only 300 samples for training, for better results use larger amount of data.
-
 # Discussion & Conceptual Checkpoints
 
 These questions are intended to help participants reflect on the design choices behind Con-J and DPO.

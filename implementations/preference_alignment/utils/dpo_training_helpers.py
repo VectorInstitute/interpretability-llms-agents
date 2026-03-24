@@ -7,6 +7,14 @@ from trl import DPOConfig, DPOTrainer
 from unsloth import FastLanguageModel, PatchDPOTrainer
 
 
+try:
+    import flash_attn  # noqa: F401
+
+    HAS_FLASH_ATTN = True
+except ImportError:
+    HAS_FLASH_ATTN = False
+
+
 def extract_prompt_from_conversations(convs) -> str:
     """
     Isolate the user's initial prompt from a conversation history.
@@ -89,7 +97,7 @@ def load_unsloth_model(model_name: str, max_seq_length: int) -> tuple[Any, Any]:
         max_seq_length=max_seq_length,
         load_in_4bit=True,
         dtype=None,
-        device_map=None,  # handled by Accelerate
+        device_map="auto",  # splits model layers across all available GPUs
     )
 
     tokenizer.pad_token = tokenizer.eos_token
@@ -97,7 +105,8 @@ def load_unsloth_model(model_name: str, max_seq_length: int) -> tuple[Any, Any]:
     tokenizer.truncation_side = "left"
     tokenizer.model_max_length = max_seq_length
 
-    model.config.use_flash_attention_2 = True
+    if HAS_FLASH_ATTN:
+        model.config.use_flash_attention_2 = True
     model.config.max_position_embeddings = max_seq_length
 
     return model, tokenizer
@@ -171,9 +180,9 @@ def build_dpo_trainer(
         output_dir=output_dir,
         beta=0.1,
         num_train_epochs=3,
-        per_device_train_batch_size=2,
-        per_device_eval_batch_size=2,
-        gradient_accumulation_steps=16,
+        per_device_train_batch_size=1,
+        per_device_eval_batch_size=1,
+        gradient_accumulation_steps=32,  # doubled to keep effective batch size the same as before (was 2×16)
         learning_rate=1.8e-6,
         warmup_ratio=0.25,
         lr_scheduler_type="cosine",

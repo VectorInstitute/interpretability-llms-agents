@@ -111,7 +111,7 @@ def run_local_inference(
     return decoded[len(prompt) :].strip()
 
 
-async def judge_with_openai(
+async def judge_with_llm(
     client: AsyncOpenAI,
     semaphore: Semaphore,
     judge_model: str,
@@ -122,7 +122,12 @@ async def judge_with_openai(
     dpo_out: str,
 ) -> Any:
     """
-    Compare two model outputs using an external flagship LLM (OpenAI).
+    Compare two model outputs using an external LLM judge.
+
+    Supports any provider that exposes an OpenAI-compatible chat completions
+    API (e.g. Gemini via ``https://generativelanguage.googleapis.com/v1beta/openai/``,
+    or OpenAI directly). The client is initialised with the appropriate
+    ``base_url`` and ``api_key`` in the notebook.
 
     Scores each output (base vs DPO) on quality dimensions using an
     asynchronous API call protected by a semaphore for rate control.
@@ -130,11 +135,11 @@ async def judge_with_openai(
     Parameters
     ----------
     client : AsyncOpenAI
-        The OpenAI API client.
+        An OpenAI-compatible async client (works for Gemini and OpenAI).
     semaphore : Semaphore
         Asyncio semaphore to limit concurrent requests.
     judge_model : str
-        Name of the OpenAI model to use as a judge.
+        Model name to use as judge (e.g. ``"gemini-2.0-flash"`` or ``"gpt-4o-mini"``).
     q : str
         The original question.
     a1 : str
