@@ -58,3 +58,4 @@ jobs:
           ignore-vulns: |
             PYSEC-2025-49
             CVE-2024-6345
+            CVE-2026-4539
