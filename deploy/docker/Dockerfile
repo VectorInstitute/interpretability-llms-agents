@@ -26,6 +26,8 @@ RUN apt-get update && \
     apt-transport-https \
     gnupg \
     lsb-release \
+    default-jre \
+    ffmpeg \
     && rm -rf /var/lib/apt/lists/*
 
 # Install Neovim 0.11+ from GitHub releases using curl (wget not available yet at this stage).

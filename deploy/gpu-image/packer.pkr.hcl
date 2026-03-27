@@ -41,7 +41,7 @@ build {
       # System packages
       "export DEBIAN_FRONTEND=noninteractive",
       "apt-get update -q",
-      "apt-get install -y -q jq tmux zsh unzip vim wget",
+      "apt-get install -y -q jq tmux zsh unzip vim wget default-jre ffmpeg",
       "rm -rf /var/lib/apt/lists/*",
 
       # Neovim from GitHub releases (must be before setup.sh so its version check skips the PPA fallback)
