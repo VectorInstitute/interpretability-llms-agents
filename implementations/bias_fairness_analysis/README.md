@@ -14,30 +14,13 @@ The goal is to **analyze and interpret model bias patterns**, not to evaluate a 
 
 ---
 
-## Environment Setup (Recommended)
+## Environment Setup
 
-This project uses a Python 3.10 environment.
-
-### Option A — Using `uv` (recommended)
+From the **root of the repository**, install the dependencies using `uv`:
 
 ```bash
-uv venv --python 3.10
+uv sync
 source .venv/bin/activate
-uv sync --active
-python -m ipykernel install --user \
-  --name bias-fairness-analysis \
-  --display-name "Bias & Fairness (Py3.10)"
-```
-
-### Option B — Using `venv` + pip
-
-```bash
-python -m venv .venv
-source .venv/bin/activate
-pip install -e .
-python -m ipykernel install --user \
-  --name bias-fairness-analysis \
-  --display-name "Bias & Fairness (Py3.10)"
 ```
 
 ---
@@ -68,7 +51,7 @@ Datasets are **not included in this repository**. They are downloaded or prepare
 
 ### 2. Jigsaw (Unintended Bias Dataset)
 
-* Must be downloaded manually from Kaggle (https://www.kaggle.com/competitions/jigsaw-unintended-bias-in-toxicity-classification/data?select=train.csv)
+* Must be downloaded manually from Kaggle (<https://www.kaggle.com/competitions/jigsaw-unintended-bias-in-toxicity-classification/data?select=train.csv>)
 
 * After downloading, place:
 
@@ -118,8 +101,8 @@ STREAM = True
 TAKE = 50000
 SAMPLE = None
 
-DATA_DIR = f"./data/{DATASET}/"
-OUT_PATH = f"./data/{DATASET}/{DATASET}.parquet"
+DATA_DIR = f"data/{DATASET}/"
+OUT_PATH = f"data/{DATASET}/{DATASET}.parquet"
 ```
 
 The notebook will:

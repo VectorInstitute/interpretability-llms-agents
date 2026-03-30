@@ -4,7 +4,7 @@ This reference implements the **Con-J framework** from:
 
 > - Ye, Z., et al., (2025).
 Learning LLM-as-a-Judge for Preference Alignment.
-https://openreview.net/forum?id=HZVIQE1MsJ
+<https://openreview.net/forum?id=HZVIQE1MsJ>
 
 Con-J trains an LLM to act as a **generative judge** using Direct Preference Optimization (DPO), instead of relying on a scalar reward model.
 
@@ -14,8 +14,8 @@ Traditional preference alignment (e.g., RLHF-style reward models) trains a model
 
 However, as shown in the following figure:
 
-- Scalar models output only a number → ❌ No explanation  
-- They are more susceptible to dataset bias  
+- Scalar models output only a number → ❌ No explanation
+- They are more susceptible to dataset bias
 - They may learn superficial patterns (e.g., verbosity)
 
 Con-J instead trains an **LLM-as-a-Judge** that generates:
@@ -25,12 +25,11 @@ Con-J instead trains an **LLM-as-a-Judge** that generates:
 
 This improves:
 
-- Interpretability  
-- Robustness to bias  
-- Alignment transparency 
+- Interpretability
+- Robustness to bias
+- Alignment transparency
 
 ![Figure 1: Scalar Reward Model vs Generative Judge](assets/Figure1.png)
-
 
 ## Con-J Training Pipeline
 
@@ -39,10 +38,12 @@ The full framework is illustrated in the following figure.
 The process consists of three stages:
 
 ### 1️⃣ Judgment Sampling(Repeated and Hint Sampling)
-Given a prompt `q` and answers `(a₁, a₂)`,  
+
+Given a prompt `q` and answers `(a₁, a₂)`,
 the pretrained LLM generates multiple **judgments with rationales**.
 
 ### 2️⃣ Judgment Filtering
+
 Using ground-truth preference labels, judgments are separated into:
 
 - **Positive judgments** (correct preference)
@@ -51,10 +52,11 @@ Using ground-truth preference labels, judgments are separated into:
 These are paired to form **contrastive judgment pairs**.
 
 ### 3️⃣ Contrastive Training (DPO)
+
 The LLM is trained using:
 
-- **DPO loss** on contrastive pairs  
-- A small **SFT loss** on positive judgments  
+- **DPO loss** on contrastive pairs
+- A small **SFT loss** on positive judgments
 
 This directly optimizes the model to prefer correct judgments while maintaining generation quality.
 
@@ -72,29 +74,62 @@ This directly optimizes the model to prefer correct judgments while maintaining 
 
 ## Dataset Preparation
 
-The filtered `.parquet` files are not included in this repository.
+The filtered `.parquet` files are hosted in a GCP bucket and downloaded separately.
 
-Please follow one of the options below to obtain the dataset.
-
----
-
-## Download Pre-Filtered Dataset (Recommended)
+### Download Pre-Filtered Dataset (Recommended)
 
 The filtered dataset used in this implementation is hosted in a GCP bucket.
 
-Download the `.parquet` files using:
+#### 1) Authenticate with GCP
 
 ```bash
-gsutil cp gs://<bucket-name>/reference_implementation_4/*.parquet .
+gcloud auth login
+gcloud auth application-default login
+# When prompted, enter the email you used to log into the coder platform.
+# A browser window will open for Google sign-in. After signing in, you will receive a code.
+# Copy that code back into the terminal to complete authentication.
+gcloud config set account YOUR_EMAIL
 ```
-*** Do not download the ```train_raw.parquet```, use the ```train_sponsor_filtered.parquet``` for data_sky or ```train_singleturn_sponsor_filtered.parquet``` for data_hh_rlhf ***
 
-After downloading, place the ```.parquet``` file inside one of the following folders (create the folder if it does not exist):
-```data_sky/```  or
-```data_hh_rlhf/```
-Then proceed with:
+Verify active account:
 
-```01_dataset_construction.ipynb```
+```bash
+gcloud auth list
+```
+
+#### 2) Download Dataset
+
+```bash
+cd implementations/preference_alignment
+gcloud storage cp gs://interp-bootcamp-data/preference-alignment/data.zip .
+unzip data.zip
+```
+
+The zip extracts a `data/` folder. Move its contents up and remove the wrapper:
+
+```bash
+mv data/data_sky . && mv data/data_hh_rlhf . && rm -rf data
+```
+
+#### 3) Cleanup temporary files
+
+```bash
+rm -rf __MACOSX data.zip .DS_Store
+```
+
+After setup, your directory should look like:
+
+```
+implementations/preference_alignment/
+├── data_sky/
+├── data_hh_rlhf/
+├── 01_dataset_construction.ipynb
+└── ...
+```
+
+> **Note:** Use `train_sponsor_filtered.parquet` (for `data_sky`) and `train_singleturn_sponsor_filtered.parquet` (for `data_hh_rlhf`).
+
+Then proceed with `01_dataset_construction.ipynb`.
 
 ## Using Your Own Dataset
 
@@ -133,6 +168,7 @@ These represent a pair of candidate responses where `chosen` is preferred over `
 ```
 
 In this case, set:
+
 - dataset_format = "sky"
 
 #### Format 2 — Raw Conversation String (HH-style)
@@ -145,6 +181,7 @@ In this case, set:
 ```
 
 In this case, set:
+
 - dataset_format = "hh"
 
 ### Adding a New Format
@@ -170,40 +207,39 @@ Once formatted properly, the rest of the pipeline (LLM-as-a-Judge → DPO → Ev
 
 ## Environment Setup
 
-### Create Environment from Scratch
+From the **root of the repository**, install the `preference-alignment` dependency group using `uv`:
 
-1. **Load required modules**
 ```bash
-module load python/3.10.12
-module load cuda-12.4
+uv sync --active --group preference-alignment
 ```
 
-2. **Create and activate a virtual environment**
+The `--active` flag ensures packages are installed into the currently activated virtual environment. After syncing, re-activate the venv to ensure your shell picks up the correct paths:
+
 ```bash
-python -m venv dpo_env
-source dpo_env/bin/activate
+deactivate
+source .venv/bin/activate
+which python3  # should point to .venv/bin/python inside the repo root
 ```
 
-3. **Install PyTorch with CUDA 12.4 support**
+> **Conflict note:** The `preference-alignment` and `xai-refresher` groups cannot be installed together. Install only one at a time.
+
+<details>
+<summary>Installing <code>flash-attn</code> (optional, for faster attention)</summary>
+
+`flash-attn` cannot be built from source on login nodes (no `nvcc`/`CUDA_HOME`). Install a pre-built wheel directly:
+
 ```bash
-pip install torch==2.6.0+cu124 torchvision==0.21.0+cu124 torchaudio==2.6.0+cu124 \
-  --extra-index-url https://download.pytorch.org/whl/cu124
+/path/to/.venv/bin/python -m pip install \
+  "https://github.com/Dao-AILab/flash-attention/releases/download/v2.7.3/flash_attn-2.7.3%2Bcu12torch2.8cxx11abiTRUE-cp312-cp312-linux_x86_64.whl"
 ```
 
-4. **Install project dependencies**
-```bash
-pip install -r dpo_req.txt
-```
+> Use `/path/to/.venv/bin/python -m pip` (explicit venv python) rather than bare `pip` or `python`, to avoid installing into the wrong environment.
+>
+> The `cu12torch2.8` wheel is compatible with `torch 2.10+cu12x`. Do **not** use `pip install flash-attn==2.7.3 --no-build-isolation` — pip will reject pre-built wheels with local version labels (e.g. `2.7.3+cu12...`) when an exact version like `==2.7.3` is requested.
+>
+> Skip this step entirely if running on a CPU-only machine.
 
-5. **Install FlashAttention**
-```bash
-pip install flash-attn==2.7.3 --no-build-isolation
-```
-
-6. **Register the environment as a Jupyter kernel**
-```bash
-python -m ipykernel install --user --name dpo_env --display-name "dpo_env"
-```
+</details>
 
 ## Notes
 
@@ -211,30 +247,28 @@ python -m ipykernel install --user --name dpo_env --display-name "dpo_env"
 - Ensure GPU availability before running ```02_inference_runner.ipynb``` and ```04_dpo_training.ipynb```.
 - The quality of alignment depends strongly on the judge model and prompt design.
 - Our results might have less win rate since we used only 300 samples for training, for better results use larger amount of data.
-
-
 # Discussion & Conceptual Checkpoints
 
 These questions are intended to help participants reflect on the design choices behind Con-J and DPO.
 
 ### 1. Why does Con-J generate a rationale instead of predicting a scalar reward?
 
-**Answer:**  
+**Answer:**
 Scalar reward models compress evaluation into a single number, which makes their decisions difficult to interpret and audit. Con-J generates both a rationale and a binary decision, increasing transparency and making it easier to detect bias or flawed reasoning.
 
 ### 2. Why is judgment filtering necessary before DPO training?
 
-**Answer:**  
+**Answer:**
 LLM-generated judgments can be inconsistent or biased. Filtering ensures that only correct (positive) judgments are contrasted against incorrect (negative) ones. Without filtering, DPO training could reinforce incorrect reasoning patterns.
 
 ### 3. What advantage does DPO have over RLHF?
 
-**Answer:**  
+**Answer:**
 DPO directly optimizes preference differences without requiring reinforcement learning or PPO-style optimization. It avoids training a separate reward model and is simpler, more stable, and easier to reproduce.
 
 ### 4. How do repeated and hint sampling improve the judge model?
 
-**Answer:**  
+**Answer:**
 Repeated sampling increases diversity in reasoning patterns, while hint sampling encourages informative rationales. This produces stronger contrastive pairs for DPO training and improves robustness.
 
 ### Open Discussion
