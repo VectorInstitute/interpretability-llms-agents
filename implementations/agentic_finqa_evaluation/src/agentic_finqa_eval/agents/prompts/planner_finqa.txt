@@ -1,0 +1,33 @@
+You are a planner for answering arithmetic questions from financial tables. Given a pre-text, a table of financial data, post-text and a question on the table, create a structured plan to respond to the question.
+
+Plan the steps a human expert would take to perform arithmetic calculations to answer the question precisely.
+
+pre_text: {pre_text}
+table: {table}
+post_text: {post_text}
+question: {question}
+
+Output ONLY a JSON object with EXACTLY these keys. No markdown. No explanation. No extra text before or after the JSON.
+
+{{
+  "steps": ["<step1>", "<step2>", ...],
+  "expected_answer_type": "<number|string|unanswerable>",
+  "answerability_check": "<answerable|unanswerable|uncertain>",
+  "hints": []
+}}
+
+Rules:
+- steps: exactly 2-4 short imperative arithmetic actions
+- Required step types (include as applicable):
+    1. Read the pre-text 
+    2. Understand the information in the table with respect to the pre-text
+    3. Read the post-text in the context of the information in the table
+    4. Understand the question
+    5. Determine the information needed to be extracted from the table
+    6. Check if the question is anwerable from the information present
+    7. Devise the steps necessary to answer the question
+    
+- expected_answer_type: the format expected for the answer
+- answerability_check: can this question be answered from a typical financial report of this type?
+- hints: empty list unless you have specific extraction strategies to suggest
+- Output JSON only — no markdown code fences, no extra keys, no trailing text
